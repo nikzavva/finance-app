@@ -1,0 +1,57 @@
+workflows:
+  submit-grade:
+    inputs:
+      GRADE:
+        type: string
+        required: true
+        description: Количество баллов за работу студента. Должно быть целым числом от 0 до 100.
+
+    tasks:
+      - name: submit-grade
+        cubes:
+          - name: validate-grade
+            script:
+              - |
+                is_valid_grade() {
+                  local value="$1"
+                  [[ "$value" =~ ^[0-9]+$ ]] || return 1
+                  (( value >= 0 && value <= 100 ))
+                }
+
+                if ! is_valid_grade "${{ inputs.GRADE }}"; then
+                  echo "Invalid grade: \"${{ inputs.GRADE }}\". Expected integer from 0 to 100."
+                  exit 1
+                fi
+
+          - name: prepare-student-repo-slug
+            script:
+              - |
+                echo "STUDENT_REPO_SLUG=$(basename "$SOURCECRAFT_REPO_URL" .git)" >> $SOURCECRAFT_OUTPUT
+
+          - name: run-shared-workflow
+            allow_failure: true
+            image: cr.yandex/sourcecraft/cubes/shared-workflows:latest
+            env:
+              ORG_SLUG: ya-schools-summer
+              REPO_SLUG: shmr-ios-internal-automations
+              WORKFLOW_NAME: submit-grade
+              WORKFLOW_VALUES: |
+                [
+                  {"name": "TASK_NAME",         "value": "${{ env.SOURCECRAFT_COMMIT_REF_NAME }}"},
+                  {"name": "GRADE",             "value": "${{ inputs.GRADE }}"},
+                  {"name": "STUDENT_REPO_SLUG", "value": "${{ cubes.prepare-student-repo-slug.outputs.STUDENT_REPO_SLUG }}"}
+                ]
+              TASK_NAME: submit-grade
+              CUBE_NAME: result
+              ARTIFACT_LOCAL_PATH: artifacts/output
+            artifacts:
+              paths:
+                - artifacts/output
+
+          - name: get-result
+            script:
+              - |
+                cat artifacts/output
+                if [ "${{ cubes.run-shared-workflow.status }}" != "success" ]; then
+                  exit 1
+                fi

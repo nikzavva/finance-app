@@ -1,0 +1,5 @@
+codereview:
+  need_ships: 1
+  ignore_self_ship: true
+  disallow_force_merge: true
+  ignore_non_reviewers_block: false
