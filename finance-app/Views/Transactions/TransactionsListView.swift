@@ -3,7 +3,7 @@ import SwiftUI
 struct TransactionsListView: View {
     let direction: Direction
     @Binding var selectedDate: Date
-    
+
     @State private var transactions: [Transaction] = []
     @State private var totalAmount: Decimal = 0
     @State private var showDatePicker = false
@@ -11,6 +11,7 @@ struct TransactionsListView: View {
     @State private var showAddTransaction = false
     @State private var categories: [Category] = []
     @State private var sortOrder: SortOrder = .date
+    @State private var selectedCategory: Category?
 
     private let transactionService = TransactionsService()
     private let categoriesService = CategoriesService()
@@ -46,9 +47,18 @@ struct TransactionsListView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                Text("Настройки (заглушка)")
+                CategorySelectionView(direction: direction) { category in
+                    if selectedCategory?.id == category.id {
+                        selectedCategory = nil
+                    } else {
+                        selectedCategory = category
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
             .onAppear {
+                selectedCategory = nil
                 loadCategories()
                 loadTransactions()
             }
@@ -56,6 +66,9 @@ struct TransactionsListView: View {
                 loadTransactions()
             }
             .onChange(of: sortOrder) {
+                loadTransactions()
+            }
+            .onChange(of: selectedCategory) {
                 loadTransactions()
             }
         }
@@ -74,7 +87,7 @@ struct TransactionsListView: View {
             .padding(.horizontal)
             .padding(.top)
             .padding(.bottom)
-            
+
             Picker("Сортировка", selection: $sortOrder) {
                 Text("По дате").tag(SortOrder.date)
                 Text("По сумме").tag(SortOrder.amount)
@@ -96,7 +109,7 @@ struct TransactionsListView: View {
         }
         .background(Color(.systemBackground))
     }
-    
+
     private func loadCategories() {
         Task {
             let all = await categoriesService.fetchAllCategories()
@@ -112,7 +125,10 @@ struct TransactionsListView: View {
 
         Task {
             let all = await transactionService.fetchTransactions(from: startOfDay, to: endOfDay)
-            let filtered = all.filter { $0.direction == direction }
+            let filtered = all.filter { transaction in
+                transaction.direction == direction &&
+                (selectedCategory == nil || transaction.categoryId == selectedCategory?.id)
+            }
 
             let sorted: [Transaction]
             switch sortOrder {

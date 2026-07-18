@@ -1,4 +1,4 @@
-struct Category {
+struct Category: Equatable {
     let id: Int
     let name: String
     let emoji: Character

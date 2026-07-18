@@ -28,6 +28,7 @@ struct BankAccountRow: View {
             }
             .padding(.horizontal)
             .padding(.vertical)
+            .contentShape(Rectangle())
             
             Divider()
                 .padding(.horizontal)

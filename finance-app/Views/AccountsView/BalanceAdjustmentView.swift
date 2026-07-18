@@ -50,6 +50,7 @@ struct BalanceAdjustmentView: View {
                 .padding(.vertical)
                 
                 Divider()
+                    .padding(.horizontal)
                 
                 HStack {
                     Text("Валюта")
@@ -64,6 +65,7 @@ struct BalanceAdjustmentView: View {
                 .padding(.vertical)
                 
                 Divider()
+                    .padding(.horizontal)
                 
                 Spacer()
             }

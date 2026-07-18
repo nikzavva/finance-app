@@ -42,7 +42,8 @@ struct BankAccountsView: View {
                     
                     ScrollView {
                         LazyVStack(spacing: .zero) {
-                            Divider().padding(.horizontal)
+                            Divider()
+                                .padding(.horizontal)
                             ForEach(accounts, id: \.id) { account in
                                 BankAccountRow(account: account, formatter: formatter)
                                     .onTapGesture {
