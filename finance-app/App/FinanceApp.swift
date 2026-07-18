@@ -4,7 +4,7 @@ import SwiftUI
 struct FinanceApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            FinanceAppView()
         }
     }
 }

@@ -2,9 +2,9 @@ import Foundation
 
 final class BankAccountsService {
     private var accounts: [BankAccount] = [
-        BankAccount(id: 1, userId: 1, name: "Яндекс Пэй", balance: 15000, currency: "RUB", createdAt: "", updatedAt: ""),
-        BankAccount(id: 2, userId: 1, name: "Сбербанк", balance: 8000, currency: "RUB", createdAt: "", updatedAt: ""),
-        BankAccount(id: 3, userId: 1, name: "Газпромбанк", balance: 3000, currency: "RUB", createdAt: "", updatedAt: "")
+        BankAccount(id: 1, userId: 1, name: "Яндекс Пэй", emoji: "💳", balance: 15000, currency: "RUB", createdAt: "", updatedAt: ""),
+        BankAccount(id: 2, userId: 1, name: "Сбербанк", emoji: "🏦", balance: 8000, currency: "RUB", createdAt: "", updatedAt: ""),
+        BankAccount(id: 3, userId: 1, name: "Газпромбанк", emoji: "⛽️", balance: 3000, currency: "RUB", createdAt: "", updatedAt: "")
     ]
     
     func fetchAccounts() async -> [BankAccount] {
