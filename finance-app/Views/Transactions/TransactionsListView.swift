@@ -2,8 +2,8 @@ import SwiftUI
 
 struct TransactionsListView: View {
     let direction: Direction
-
-    @State private var selectedDate: Date = Date()
+    @Binding var selectedDate: Date
+    
     @State private var transactions: [Transaction] = []
     @State private var totalAmount: Decimal = 0
     @State private var showDatePicker = false
@@ -27,9 +27,15 @@ struct TransactionsListView: View {
         NavigationStack {
             ZStack {
                 mainContent
-                addButton
+                AddButton { showAddTransaction = true }
             }
-            .toolbar { toolbarItems }
+            .toolbar {
+                CommonToolbar(
+                    selectedDate: $selectedDate,
+                    showDatePicker: $showDatePicker,
+                    showSettings: $showSettings
+                )
+            }
             .sheet(isPresented: $showAddTransaction) {
                 Text("Добавление операции (заглушка)")
             }
@@ -89,73 +95,6 @@ struct TransactionsListView: View {
             }
         }
         .background(Color(.systemBackground))
-    }
-
-    private var addButton: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                Button(action: { showAddTransaction = true }) {
-                    Image(systemName: "plus")
-                        .font(.largeTitle)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .frame(width: UIConstants.Sizes.addButton, height: UIConstants.Sizes.addButton)
-                        .background(Color("AccentColor"))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing)
-                .padding(.bottom)
-            }
-        }
-    }
-
-    private var toolbarItems: some ToolbarContent {
-        Group {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { showDatePicker = true }) {
-                    HStack {
-                        Image(systemName: "calendar")
-                        Text(selectedDate, format: .dateTime.day().month(.wide))
-                    }
-                    .font(.callout)
-                    .foregroundColor(.primary)
-                }
-                .popover(isPresented: $showDatePicker, attachmentAnchor: .point(.bottom)) {
-                    datePicker
-                        .presentationCompactAdaptation(.none)
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(value: AppRoute.analytics) {
-                    Image(systemName: "chart.pie")
-                        .font(.title3)
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(.plain)
-            }
-            
-            if #available(iOS 26, *) {
-                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showSettings = true }) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.title3)
-                        .foregroundColor(.primary)
-                }
-            }
-        }
-    }
-
-    private var datePicker: some View {
-        DatePicker("Выберите дату", selection: $selectedDate, displayedComponents: .date)
-            .datePickerStyle(.graphical)
-            .frame(minWidth: UIConstants.Sizes.datePickerMinWidth)
     }
     
     private func loadCategories() {

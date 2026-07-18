@@ -11,6 +11,11 @@ final class BankAccountsService {
         return accounts
     }
     
+    func refreshData() async -> [BankAccount] {
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        return accounts
+    }
+    
     func fetchAccount(id: Int) async -> BankAccount? {
         return accounts.first { $0.id == id }
     }

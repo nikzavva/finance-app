@@ -1,6 +1,6 @@
 import Foundation
 
-struct BankAccount {
+struct BankAccount: Identifiable {
     let id: Int
     let userId: Int
     let name: String
