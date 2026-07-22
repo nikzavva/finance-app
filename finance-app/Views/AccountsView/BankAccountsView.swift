@@ -16,8 +16,8 @@ struct BankAccountsView: View {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.groupingSeparator = " "
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 0
+        f.minimumFractionDigits = 2
+        f.maximumFractionDigits = 2
         return f
     }()
     

@@ -15,11 +15,12 @@ struct CommonToolbar: ToolbarContent {
                 .font(.callout)
                 .foregroundColor(.primary)
             }
-            .popover(isPresented: $showDatePicker, attachmentAnchor: .point(.bottom)) {
+            .sheet(isPresented: $showDatePicker) {
                 DatePicker("Выберите дату", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
-                    .frame(minWidth: UIConstants.Sizes.datePickerMinWidth)
-                    .presentationCompactAdaptation(.none)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                    .presentationDragIndicator(.hidden)
             }
         }
         
