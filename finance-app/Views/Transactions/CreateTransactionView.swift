@@ -1,36 +1,27 @@
 import SwiftUI
 
-struct EditTransactionView: View {
-    let transaction: Transaction
-    let onSave: (Transaction) -> Void
-    let onDelete: (Int) -> Void
+struct CreateTransactionView: View {
+    let direction: Direction
+    let initialAccount: BankAccount?
+    let onCreate: (Transaction) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var amount: String = ""
-    @State private var previousAmount: String = ""
+    @State private var amount: String = "0"
+    @State private var previousAmount: String = "0"
     @State private var date: Date = Date()
     @State private var comment: String = ""
     @State private var selectedCategory: Category?
     @State private var selectedAccount: BankAccount?
     @State private var showCategorySelection = false
     @State private var showAccountSelection = false
-    @State private var showDeleteConfirmation = false
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
     
     private let categoriesService = CategoriesService()
     private let accountsService = BankAccountsService()
+    private let transactionService = TransactionsService()
     @State private var categories: [Category] = []
     @State private var accounts: [BankAccount] = []
-    
-    private let formatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.groupingSeparator = " "
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 2
-        return f
-    }()
     
     var body: some View {
         NavigationStack {
@@ -116,16 +107,14 @@ struct EditTransactionView: View {
                 Spacer()
             }
             .background(Color(.systemBackground))
-            .navigationTitle(transaction.direction == .income ? "Корректировка дохода" : "Корректировка расхода")
+            .navigationTitle(direction == .income ? "Внести доход" : "Внести расход")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Image(systemName: "trash")
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
                             .font(.body)
-                            .foregroundColor(.red)
+                            .foregroundColor(.primary)
                     }
                 }
                 
@@ -133,7 +122,7 @@ struct EditTransactionView: View {
                     Button(action: save) {
                         Image(systemName: "checkmark")
                             .font(.body)
-                            .foregroundColor(isValid ? .accentColor : .gray)
+                            .foregroundColor(.accentColor)
                     }
                     .disabled(!isValid)
                 }
@@ -142,7 +131,7 @@ struct EditTransactionView: View {
                 loadInitialData()
             }
             .sheet(isPresented: $showCategorySelection) {
-                CategorySelectionView(direction: transaction.direction) { category in
+                CategorySelectionView(direction: direction) { category in
                     selectedCategory = category
                 }
                 .presentationDetents([.medium, .large])
@@ -152,15 +141,6 @@ struct EditTransactionView: View {
                     selectedAccount = account
                 }
                 .presentationDetents([.medium, .large])
-            }
-            .alert("Удалить операцию?", isPresented: $showDeleteConfirmation) {
-                Button("Удалить", role: .destructive) {
-                    onDelete(transaction.id)
-                    dismiss()
-                }
-                Button("Отмена", role: .cancel) {}
-            } message: {
-                Text("Это действие нельзя отменить")
             }
             .gesture(
                 DragGesture()
@@ -174,47 +154,46 @@ struct EditTransactionView: View {
     }
     
     private var isValid: Bool {
-        AmountTextField.parseAmount(amount) != nil && selectedCategory != nil
+        AmountTextField.parseAmount(amount) != nil && selectedCategory != nil && selectedAccount != nil
     }
     
     private func loadInitialData() {
         Task {
-            async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
+            async let categoriesTask = categoriesService.fetchCategories(direction: direction)
             async let accountsTask = accountsService.fetchAccounts()
             
             let (cats, accs) = await (categoriesTask, accountsTask)
             await MainActor.run {
                 categories = cats
                 accounts = accs
-                selectedCategory = cats.first { $0.id == transaction.categoryId }
-                selectedAccount = accs.first { $0.id == transaction.accountId }
                 
-                let initial = AmountTextField.formatAmount(transaction.amount, formatter: formatter)
-                amount = initial
-                previousAmount = initial
-                date = transaction.transactionDate
-                comment = transaction.comment ?? ""
+                if let initial = initialAccount {
+                    selectedAccount = initial
+                } else {
+                    selectedAccount = accs.first
+                }
             }
         }
     }
     
     private func save() {
         guard let decimalAmount = AmountTextField.parseAmount(amount),
-              let category = selectedCategory else { return }
+              let category = selectedCategory,
+              let account = selectedAccount else { return }
         
-        let updated = Transaction(
-            id: transaction.id,
-            accountId: selectedAccount?.id ?? transaction.accountId,
+        let newTransaction = Transaction(
+            id: 0,
+            accountId: account.id,
             categoryId: category.id,
             amount: decimalAmount,
             transactionDate: date,
             comment: comment.isEmpty ? nil : comment,
-            createdAt: transaction.createdAt,
+            createdAt: ISO8601DateFormatter().string(from: Date()),
             updatedAt: ISO8601DateFormatter().string(from: Date()),
-            direction: transaction.direction
+            direction: direction
         )
         
-        onSave(updated)
+        onCreate(newTransaction)
         dismiss()
     }
 }

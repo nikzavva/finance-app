@@ -5,12 +5,12 @@ struct TransactionsListView: View {
     @Binding var selectedDate: Date
 
     @State private var transactions: [Transaction] = []
+    @State private var categories: [Category] = []
     @State private var totalAmount: Decimal = 0
+    @State private var sortOrder: SortOrder = .date
     @State private var showDatePicker = false
     @State private var showSettings = false
-    @State private var showAddTransaction = false
-    @State private var categories: [Category] = []
-    @State private var sortOrder: SortOrder = .date
+    @State private var showCreateTransaction = false
     @State private var selectedCategory: Category?
     @State private var selectedTransaction: Transaction?
 
@@ -29,7 +29,7 @@ struct TransactionsListView: View {
         NavigationStack {
             ZStack {
                 mainContent
-                AddButton { showAddTransaction = true }
+                AddButton { showCreateTransaction = true }
             }
             .toolbar {
                 CommonToolbar(
@@ -38,8 +38,17 @@ struct TransactionsListView: View {
                     showSettings: $showSettings
                 )
             }
-            .sheet(isPresented: $showAddTransaction) {
-                Text("Добавление операции (заглушка)")
+            .sheet(isPresented: $showCreateTransaction) {
+                CreateTransactionView(
+                    direction: direction,
+                    initialAccount: nil,
+                    onCreate: { newTransaction in
+                        Task {
+                            _ = await transactionService.createTransaction(newTransaction)
+                            loadTransactions()
+                        }
+                    }
+                )
             }
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {

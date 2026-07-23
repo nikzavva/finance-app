@@ -15,10 +15,11 @@ final class TransactionsService {
     }
     
     func createTransaction(_ transaction: Transaction) async -> Transaction? {
-        cache.addTransaction(transaction)
-        return transaction
+        var newTransaction = transaction
+        newTransaction.id = (cache.transactions.map(\.id).max() ?? 0) + 1
+        cache.addTransaction(newTransaction)
+        return newTransaction
     }
-    
     func updateTransaction(_ transaction: Transaction) async -> Transaction? {
         cache.addTransaction(transaction)
         return transaction
