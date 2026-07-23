@@ -27,5 +27,4 @@ struct FinanceAppView: View {
 
 #Preview {
     FinanceAppView()
-        .environment(\.locale, Locale(identifier: "ru_RU"))
 }

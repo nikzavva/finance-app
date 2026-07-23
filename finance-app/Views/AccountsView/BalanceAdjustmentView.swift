@@ -43,8 +43,9 @@ struct BalanceAdjustmentView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    DatePicker("", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
+                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
                 .padding(.vertical)

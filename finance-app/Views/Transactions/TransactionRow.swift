@@ -33,5 +33,6 @@ struct TransactionRow: View {
             Divider()
                 .padding(.horizontal)
         }
+        .contentShape(Rectangle())
     }
 }

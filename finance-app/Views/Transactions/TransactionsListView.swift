@@ -12,6 +12,7 @@ struct TransactionsListView: View {
     @State private var categories: [Category] = []
     @State private var sortOrder: SortOrder = .date
     @State private var selectedCategory: Category?
+    @State private var selectedTransaction: Transaction?
 
     private let transactionService = TransactionsService()
     private let categoriesService = CategoriesService()
@@ -20,7 +21,7 @@ struct TransactionsListView: View {
         f.numberStyle = .decimal
         f.groupingSeparator = " "
         f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 0
+        f.maximumFractionDigits = 2
         return f
     }()
 
@@ -56,6 +57,23 @@ struct TransactionsListView: View {
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(item: $selectedTransaction) { transaction in
+                EditTransactionView(
+                    transaction: transaction,
+                    onSave: { updated in
+                        Task {
+                            _ = await transactionService.updateTransaction(updated)
+                            loadTransactions()
+                        }
+                    },
+                    onDelete: { id in
+                        Task {
+                            _ = await transactionService.deleteTransaction(id: id)
+                            loadTransactions()
+                        }
+                    }
+                )
             }
             .onAppear {
                 selectedCategory = nil
@@ -103,6 +121,9 @@ struct TransactionsListView: View {
                             transaction: transaction,
                             formatter: formatter
                         )
+                        .onTapGesture {
+                            selectedTransaction = transaction
+                        }
                     }
                 }
             }
