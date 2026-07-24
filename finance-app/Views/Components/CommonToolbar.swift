@@ -16,7 +16,7 @@ struct CommonToolbar: ToolbarContent {
                 .foregroundColor(.primary)
             }
             .sheet(isPresented: $showDatePicker) {
-                DatePicker("Выберите дату", selection: $selectedDate, displayedComponents: .date)
+                DatePicker("Выберите дату", selection: $selectedDate, in: ...Date(), displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .presentationDetents([.medium])
             }

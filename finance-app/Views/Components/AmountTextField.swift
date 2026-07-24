@@ -5,12 +5,15 @@ struct AmountTextField: View {
     @Binding var previousAmount: String
     @FocusState.Binding var isFocused: Bool
     
+    private let decimalSeparator = Locale.current.decimalSeparator ?? ","
+    
     private let formatter: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.groupingSeparator = " "
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 2
+        f.decimalSeparator = Locale.current.decimalSeparator ?? ","
         return f
     }()
     
@@ -47,7 +50,7 @@ struct AmountTextField: View {
             if char.isNumber {
                 filtered.append(char)
             } else if (char == "," || char == ".") && !hasSeparator {
-                filtered.append(char)
+                filtered.append(decimalSeparator)
                 hasSeparator = true
             }
         }
@@ -58,7 +61,7 @@ struct AmountTextField: View {
             return
         }
         
-        let cleaned = filtered.replacingOccurrences(of: ",", with: ".")
+        let cleaned = filtered.replacingOccurrences(of: decimalSeparator, with: ".")
         let parts = cleaned.split(separator: ".", omittingEmptySubsequences: false)
         
         if let integerPart = Decimal(string: String(parts[0])),
@@ -69,7 +72,7 @@ struct AmountTextField: View {
         
         if parts.count == 2 && parts[1].isEmpty {
             let integerFormatted = formatAmount(Decimal(string: String(parts[0])) ?? 0)
-            amount = integerFormatted + ","
+            amount = integerFormatted + decimalSeparator
             return
         }
         
@@ -82,7 +85,7 @@ struct AmountTextField: View {
             }
             
             let integerFormatted = formatAmount(Decimal(string: String(parts[0])) ?? 0)
-            amount = integerFormatted + "," + fractionalPart
+            amount = integerFormatted + decimalSeparator + fractionalPart
             previousAmount = amount
             return
         }
@@ -103,8 +106,9 @@ struct AmountTextField: View {
     }
     
     static func parseAmount(_ string: String) -> Decimal? {
+        let separator = Locale.current.decimalSeparator ?? ","
         let cleaned = string.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: ",", with: ".")
+            .replacingOccurrences(of: separator, with: ".")
         return Decimal(string: cleaned)
     }
     

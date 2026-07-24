@@ -58,7 +58,7 @@ struct CreateTransactionView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    DatePicker("", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("", selection: $date, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                         .labelsHidden()
                 }
                 .padding(.horizontal)
