@@ -14,6 +14,7 @@ struct CreateTransactionView: View {
     @State private var selectedAccount: BankAccount?
     @State private var showCategorySelection = false
     @State private var showAccountSelection = false
+    @State private var showValidationError = false
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
     
@@ -119,12 +120,17 @@ struct CreateTransactionView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: save) {
+                    Button(action: {
+                        if isValid {
+                            save()
+                        } else {
+                            showValidationError = true
+                        }
+                    }) {
                         Image(systemName: "checkmark")
                             .font(.body)
                             .foregroundColor(.accentColor)
                     }
-                    .disabled(!isValid)
                 }
             }
             .onAppear {
@@ -142,6 +148,11 @@ struct CreateTransactionView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
+            .alert("Заполните все поля", isPresented: $showValidationError) {
+                Button("ОК", role: .cancel) {}
+            } message: {
+                Text("Сумма должна быть больше 0 и статья обязательна")
+            }
             .gesture(
                 DragGesture()
                     .onEnded { _ in
@@ -154,9 +165,11 @@ struct CreateTransactionView: View {
     }
     
     private var isValid: Bool {
-        AmountTextField.parseAmount(amount) != nil && selectedCategory != nil && selectedAccount != nil
+        guard let amount = AmountTextField.parseAmount(self.amount),
+              amount > 0 else { return false }
+        return selectedCategory != nil
     }
-    
+
     private func loadInitialData() {
         Task {
             async let categoriesTask = categoriesService.fetchCategories(direction: direction)

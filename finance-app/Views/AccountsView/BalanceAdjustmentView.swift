@@ -73,9 +73,8 @@ struct BalanceAdjustmentView: View {
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body)
-                            .foregroundColor(AmountTextField.parseAmount(amount) == nil ? .gray : .accentColor)
+                            .foregroundColor(.accentColor)
                     }
-                    .disabled(AmountTextField.parseAmount(amount) == nil)
                 }
             }
             .onAppear {
