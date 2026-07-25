@@ -6,7 +6,7 @@ struct CategoryDTO: Codable {
     let emoji: String
     let isIncome: Bool
     
-    func toDomain() -> Category {
+    nonisolated func toDomain() -> Category {
         Category(
             id: id,
             name: name,

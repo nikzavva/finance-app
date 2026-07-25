@@ -62,7 +62,8 @@ final class NetworkClient {
         self.token = "23708b59ca865cb482ce0552c1cae0cf"
         
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 15
         self.session = URLSession(configuration: config)
         
         self.encoder = JSONEncoder()
@@ -98,7 +99,6 @@ final class NetworkClient {
     
     private func performRequestWithRetry(_ request: URLRequest) async throws -> (Data, URLResponse) {
         var attempt = 0
-        var lastError: Error?
         
         while attempt <= maxRetries {
             do {
@@ -120,33 +120,16 @@ final class NetworkClient {
             } catch let error as NetworkError {
                 switch error {
                 case .networkUnavailable:
-                    if attempt < maxRetries {
-                        let delay = calculateDelay(attempt: attempt)
-                        #if DEBUG
-                        print("🔄 Retry #\(attempt + 1) for \(request.url?.path ?? "") after \(String(format: "%.2f", delay))s (network error)")
-                        #endif
-                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                        attempt += 1
-                        lastError = error
-                        continue
-                    }
                     throw error
                 default:
                     throw error
                 }
             } catch {
-                if attempt < maxRetries {
-                    let delay = calculateDelay(attempt: attempt)
-                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    attempt += 1
-                    lastError = error
-                    continue
-                }
                 throw error
             }
         }
         
-        throw lastError ?? NetworkError.noData
+        throw NetworkError.noData
     }
     
     private func calculateDelay(attempt: Int) -> TimeInterval {

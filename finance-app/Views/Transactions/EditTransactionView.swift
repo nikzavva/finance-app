@@ -215,28 +215,21 @@ struct EditTransactionView: View {
 
     private func loadInitialData() {
         Task {
-            do {
-                async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
-                async let accountsTask = accountsService.fetchAccounts()
+            async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
+            async let accountsTask = accountsService.fetchAccounts()
+            
+            let (cats, accs) = await (categoriesTask, accountsTask)
+            await MainActor.run {
+                categories = cats
+                accounts = accs
+                selectedCategory = cats.first { $0.id == transaction.categoryId }
+                selectedAccount = accs.first { $0.id == transaction.accountId }
                 
-                let (cats, accs) = try await (categoriesTask, accountsTask)
-                await MainActor.run {
-                    categories = cats
-                    accounts = accs
-                    selectedCategory = cats.first { $0.id == transaction.categoryId }
-                    selectedAccount = accs.first { $0.id == transaction.accountId }
-                    
-                    let initial = AmountTextField.formatAmount(transaction.amount, formatter: formatter)
-                    amount = initial
-                    previousAmount = initial
-                    date = transaction.transactionDate
-                    comment = transaction.comment ?? ""
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showLoadError = true
-                }
+                let initial = AmountTextField.formatAmount(transaction.amount, formatter: formatter)
+                amount = initial
+                previousAmount = initial
+                date = transaction.transactionDate
+                comment = transaction.comment ?? ""
             }
         }
     }

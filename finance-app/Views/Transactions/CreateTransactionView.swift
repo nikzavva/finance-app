@@ -194,28 +194,21 @@ struct CreateTransactionView: View {
     
     private func loadInitialData() {
         Task {
-            do {
-                async let categoriesTask = categoriesService.fetchCategories(direction: direction)
-                async let accountsTask = accountsService.fetchAccounts()
+            async let categoriesTask = categoriesService.fetchCategories(direction: direction)
+            async let accountsTask = accountsService.fetchAccounts()
+            
+            let (cats, accs) = await (categoriesTask, accountsTask)
+            await MainActor.run {
+                categories = cats
+                accounts = accs
                 
-                let (cats, accs) = try await (categoriesTask, accountsTask)
-                await MainActor.run {
-                    categories = cats
-                    accounts = accs
-                    
-                    if accs.isEmpty {
-                        errorMessage = "Сначала создайте счёт в разделе «Счета»"
-                        showLoadError = true
-                    } else if let initial = initialAccount {
-                        selectedAccount = initial
-                    } else {
-                        selectedAccount = accs.first
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
+                if accs.isEmpty {
+                    errorMessage = "Сначала создайте счёт в разделе «Счета»"
                     showLoadError = true
+                } else if let initial = initialAccount {
+                    selectedAccount = initial
+                } else {
+                    selectedAccount = accs.first
                 }
             }
         }

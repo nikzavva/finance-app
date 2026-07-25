@@ -10,7 +10,7 @@ struct BankAccountDTO: Codable {
     let createdAt: String
     let updatedAt: String
     
-    func toDomain() -> BankAccount {
+    nonisolated func toDomain() -> BankAccount {
         BankAccount(
             id: id,
             userId: userId,

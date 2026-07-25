@@ -10,7 +10,7 @@ struct TransactionDTO: Codable {
     let createdAt: String
     let updatedAt: String
     
-    func toDomain() -> Transaction {
+    nonisolated func toDomain() -> Transaction {
         Transaction(
             id: id,
             accountId: account.id,
@@ -78,7 +78,7 @@ struct TransactionCreatedDTO: Codable {
     let createdAt: String
     let updatedAt: String
     
-    func toDomain(direction: Direction) -> Transaction {
+    nonisolated func toDomain(direction: Direction) -> Transaction {
         Transaction(
             id: id,
             accountId: accountId,
