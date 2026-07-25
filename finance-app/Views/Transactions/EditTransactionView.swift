@@ -16,6 +16,8 @@ struct EditTransactionView: View {
     @State private var showAccountSelection = false
     @State private var showDeleteConfirmation = false
     @State private var showValidationError = false
+    @State private var showLoadError = false
+    @State private var errorMessage = ""
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
     
@@ -173,6 +175,13 @@ struct EditTransactionView: View {
             } message: {
                 Text("Сумма должна быть больше 0")
             }
+            .alert("Ошибка загрузки", isPresented: $showLoadError) {
+                Button("ОК", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text(errorMessage)
+            }
             .gesture(
                 DragGesture()
                     .onEnded { _ in
@@ -192,21 +201,28 @@ struct EditTransactionView: View {
 
     private func loadInitialData() {
         Task {
-            async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
-            async let accountsTask = accountsService.fetchAccounts()
-            
-            let (cats, accs) = await (categoriesTask, accountsTask)
-            await MainActor.run {
-                categories = cats
-                accounts = accs
-                selectedCategory = cats.first { $0.id == transaction.categoryId }
-                selectedAccount = accs.first { $0.id == transaction.accountId }
+            do {
+                async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
+                async let accountsTask = accountsService.fetchAccounts()
                 
-                let initial = AmountTextField.formatAmount(transaction.amount, formatter: formatter)
-                amount = initial
-                previousAmount = initial
-                date = transaction.transactionDate
-                comment = transaction.comment ?? ""
+                let (cats, accs) = try await (categoriesTask, accountsTask)
+                await MainActor.run {
+                    categories = cats
+                    accounts = accs
+                    selectedCategory = cats.first { $0.id == transaction.categoryId }
+                    selectedAccount = accs.first { $0.id == transaction.accountId }
+                    
+                    let initial = AmountTextField.formatAmount(transaction.amount, formatter: formatter)
+                    amount = initial
+                    previousAmount = initial
+                    date = transaction.transactionDate
+                    comment = transaction.comment ?? ""
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showLoadError = true
+                }
             }
         }
     }

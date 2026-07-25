@@ -1,0 +1,6 @@
+enum LoadingState<T> {
+    case idle
+    case loading
+    case loaded(T)
+    case error(String)
+}

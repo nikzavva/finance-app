@@ -5,11 +5,13 @@ struct BalanceAdjustmentView: View {
     let appCurrency: String
     let formatter: NumberFormatter
     let onSave: (Decimal, Date) -> Void
+    let onDelete: (Int) -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var amount: String = ""
     @State private var previousAmount: String = ""
     @State private var date: Date = Date()
+    @State private var showDeleteConfirmation = false
     @FocusState private var isAmountFocused: Bool
     
     var body: some View {
@@ -58,10 +60,12 @@ struct BalanceAdjustmentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
                             .font(.body)
-                            .foregroundColor(.primary)
+                            .foregroundColor(.red)
                     }
                 }
                 
@@ -81,6 +85,15 @@ struct BalanceAdjustmentView: View {
                 let initial = AmountTextField.formatAmount(account.balance, formatter: formatter)
                 amount = initial
                 previousAmount = initial
+            }
+            .alert("Удалить счёт?", isPresented: $showDeleteConfirmation) {
+                Button("Удалить", role: .destructive) {
+                    onDelete(account.id)
+                    dismiss()
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("Счёт будет удалён. Это действие нельзя отменить")
             }
             .gesture(
                 DragGesture()

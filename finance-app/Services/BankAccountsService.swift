@@ -1,30 +1,34 @@
 import Foundation
 
 final class BankAccountsService {
-    private var accounts: [BankAccount] = [
-        BankAccount(id: 1, userId: 1, name: "Яндекс Пэй", emoji: "💳", balance: 15000, currency: "RUB", createdAt: "", updatedAt: ""),
-        BankAccount(id: 2, userId: 1, name: "Сбербанк", emoji: "🏦", balance: 8000, currency: "RUB", createdAt: "", updatedAt: ""),
-        BankAccount(id: 3, userId: 1, name: "Газпромбанк", emoji: "⛽️", balance: 3000, currency: "RUB", createdAt: "", updatedAt: "")
-    ]
+    private let network = NetworkClient.shared
     
-    func fetchAccounts() async -> [BankAccount] {
-        return accounts
+    func fetchAccounts() async throws -> [BankAccount] {
+        let dtos: [BankAccountDTO] = try await network.get(endpoint: "/accounts")
+        return dtos.map { $0.toDomain() }
     }
     
-    func refreshData() async -> [BankAccount] {
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        return accounts
+    func createAccount(_ account: BankAccount) async throws -> BankAccount {
+        let request = CreateAccountRequestDTO(from: account)
+        let dto: BankAccountDTO = try await network.request(
+            endpoint: "/accounts",
+            method: .post,
+            body: request
+        )
+        return dto.toDomain()
     }
     
-    func fetchAccount(id: Int) async -> BankAccount? {
-        return accounts.first { $0.id == id }
+    func updateAccount(_ account: BankAccount) async throws -> BankAccount {
+        let request = UpdateAccountRequestDTO(from: account)
+        let dto: BankAccountDTO = try await network.request(
+            endpoint: "/accounts/\(account.id)",
+            method: .put,
+            body: request
+        )
+        return dto.toDomain()
     }
     
-    func updateAccount(_ account: BankAccount) async -> BankAccount? {
-        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-            accounts[index] = account
-            return account
-        }
-        return nil
+    func deleteAccount(id: Int) async throws {
+        try await network.delete(endpoint: "/accounts/\(id)")
     }
 }

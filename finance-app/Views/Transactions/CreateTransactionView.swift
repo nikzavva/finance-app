@@ -15,6 +15,8 @@ struct CreateTransactionView: View {
     @State private var showCategorySelection = false
     @State private var showAccountSelection = false
     @State private var showValidationError = false
+    @State private var showLoadError = false
+    @State private var errorMessage = ""
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
     
@@ -153,6 +155,13 @@ struct CreateTransactionView: View {
             } message: {
                 Text("Сумма должна быть больше 0 и статья обязательна")
             }
+            .alert("Ошибка загрузки", isPresented: $showLoadError) {
+                Button("ОК", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text(errorMessage)
+            }
             .gesture(
                 DragGesture()
                     .onEnded { _ in
@@ -172,18 +181,28 @@ struct CreateTransactionView: View {
 
     private func loadInitialData() {
         Task {
-            async let categoriesTask = categoriesService.fetchCategories(direction: direction)
-            async let accountsTask = accountsService.fetchAccounts()
-            
-            let (cats, accs) = await (categoriesTask, accountsTask)
-            await MainActor.run {
-                categories = cats
-                accounts = accs
+            do {
+                async let categoriesTask = categoriesService.fetchCategories(direction: direction)
+                async let accountsTask = accountsService.fetchAccounts()
                 
-                if let initial = initialAccount {
-                    selectedAccount = initial
-                } else {
-                    selectedAccount = accs.first
+                let (cats, accs) = try await (categoriesTask, accountsTask)
+                await MainActor.run {
+                    categories = cats
+                    accounts = accs
+                    
+                    if accs.isEmpty {
+                        errorMessage = "Сначала создайте счёт в разделе «Счета»"
+                        showLoadError = true
+                    } else if let initial = initialAccount {
+                        selectedAccount = initial
+                    } else {
+                        selectedAccount = accs.first
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showLoadError = true
                 }
             }
         }
