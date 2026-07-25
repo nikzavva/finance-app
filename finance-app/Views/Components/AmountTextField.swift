@@ -5,6 +5,7 @@ struct AmountTextField: View {
     @Binding var previousAmount: String
     @FocusState.Binding var isFocused: Bool
     
+    var maxAmount: Decimal = Constants.maxAmount
     private let decimalSeparator = Locale.current.decimalSeparator ?? ","
     
     private let formatter: NumberFormatter = {
@@ -29,6 +30,19 @@ struct AmountTextField: View {
                 .padding(.bottom)
                 .onChange(of: amount) { _, newValue in
                     formatInput(newValue)
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused {
+                        if amount == "0" {
+                            amount = ""
+                            previousAmount = ""
+                        }
+                    } else {
+                        if amount.isEmpty {
+                            amount = "0"
+                            previousAmount = "0"
+                        }
+                    }
                 }
             
             GeometryReader { geometry in
@@ -56,8 +70,13 @@ struct AmountTextField: View {
         }
         
         if filtered.isEmpty {
-            amount = "0"
-            previousAmount = "0"
+            if isFocused {
+                amount = ""
+                previousAmount = ""
+            } else {
+                amount = "0"
+                previousAmount = "0"
+            }
             return
         }
         
@@ -65,7 +84,7 @@ struct AmountTextField: View {
         let parts = cleaned.split(separator: ".", omittingEmptySubsequences: false)
         
         if let integerPart = Decimal(string: String(parts[0])),
-           integerPart > Constants.maxAmount {
+           integerPart > maxAmount {
             amount = previousAmount
             return
         }
@@ -73,6 +92,7 @@ struct AmountTextField: View {
         if parts.count == 2 && parts[1].isEmpty {
             let integerFormatted = formatAmount(Decimal(string: String(parts[0])) ?? 0)
             amount = integerFormatted + decimalSeparator
+            previousAmount = amount
             return
         }
         
@@ -106,6 +126,9 @@ struct AmountTextField: View {
     }
     
     static func parseAmount(_ string: String) -> Decimal? {
+        if string.isEmpty || string == "0" {
+            return Decimal(0)
+        }
         let separator = Locale.current.decimalSeparator ?? ","
         let cleaned = string.replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: separator, with: ".")

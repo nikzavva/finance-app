@@ -170,10 +170,17 @@ struct EditTransactionView: View {
             } message: {
                 Text("Это действие нельзя отменить")
             }
-            .alert("Заполните сумму", isPresented: $showValidationError) {
+            .alert("Заполните все поля", isPresented: $showValidationError) {
                 Button("ОК", role: .cancel) {}
             } message: {
-                Text("Сумма должна быть больше 0")
+                if let amount = AmountTextField.parseAmount(self.amount),
+                   let account = selectedAccount,
+                   transaction.direction == .outcome,
+                   account.balance + transaction.amount < amount {
+                    Text("Недостаточно средств на счёте")
+                } else {
+                    Text("Сумма должна быть больше 0")
+                }
             }
             .alert("Ошибка загрузки", isPresented: $showLoadError) {
                 Button("ОК", role: .cancel) {
@@ -194,8 +201,15 @@ struct EditTransactionView: View {
     }
     
     private var isValid: Bool {
-        guard let amount = AmountTextField.parseAmount(self.amount),
-              amount > 0 else { return false }
+        guard let newAmount = AmountTextField.parseAmount(self.amount),
+              newAmount > 0,
+              selectedCategory != nil,
+              let account = selectedAccount else { return false }
+        
+        if transaction.direction == .outcome {
+            return account.balance + transaction.amount >= newAmount
+        }
+        
         return true
     }
 

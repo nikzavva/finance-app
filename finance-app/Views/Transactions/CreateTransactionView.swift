@@ -153,7 +153,13 @@ struct CreateTransactionView: View {
             .alert("Заполните все поля", isPresented: $showValidationError) {
                 Button("ОК", role: .cancel) {}
             } message: {
-                Text("Сумма должна быть больше 0 и статья обязательна")
+                if let amount = AmountTextField.parseAmount(self.amount),
+                   let account = selectedAccount,
+                   direction == .outcome && account.balance < amount {
+                    Text("Недостаточно средств на счёте")
+                } else {
+                    Text("Сумма должна быть больше 0 и статья обязательна")
+                }
             }
             .alert("Ошибка загрузки", isPresented: $showLoadError) {
                 Button("ОК", role: .cancel) {
@@ -175,10 +181,17 @@ struct CreateTransactionView: View {
     
     private var isValid: Bool {
         guard let amount = AmountTextField.parseAmount(self.amount),
-              amount > 0 else { return false }
-        return selectedCategory != nil
+              amount > 0,
+              let _ = selectedCategory,
+              let account = selectedAccount else { return false }
+        
+        if direction == .outcome {
+            return account.balance >= amount
+        }
+        
+        return true
     }
-
+    
     private func loadInitialData() {
         Task {
             do {

@@ -69,6 +69,17 @@ struct BankAccountsView: View {
                     AnalyticsView()
                 }
             }
+            .onAppear {
+                if case .idle = state {
+                    loadAccounts()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .transactionsDidChange)) { _ in
+                loadAccounts()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .accountsDidChange)) { _ in
+                loadAccounts()
+            }
             .alert("Ошибка", isPresented: $showOperationError) {
                 Button("ОК", role: .cancel) {}
             } message: {
@@ -175,6 +186,7 @@ struct BankAccountsView: View {
         Task {
             do {
                 _ = try await accountsService.createAccount(account)
+                NotificationCenter.default.post(name: .accountsDidChange, object: nil)
                 let accounts = try await accountsService.fetchAccounts()
                 await MainActor.run {
                     state = .loaded(accounts)
@@ -204,6 +216,7 @@ struct BankAccountsView: View {
                     updatedAt: ISO8601DateFormatter().string(from: newDate)
                 )
                 _ = try await accountsService.updateAccount(updated)
+                NotificationCenter.default.post(name: .accountsDidChange, object: nil)
                 let accounts = try await accountsService.fetchAccounts()
                 await MainActor.run {
                     state = .loaded(accounts)
@@ -224,6 +237,7 @@ struct BankAccountsView: View {
         Task {
             do {
                 try await accountsService.deleteAccount(id: id)
+                NotificationCenter.default.post(name: .accountsDidChange, object: nil)
                 let accounts = try await accountsService.fetchAccounts()
                 await MainActor.run {
                     state = .loaded(accounts)

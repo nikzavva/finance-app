@@ -277,6 +277,7 @@ struct TransactionsListView: View {
         Task {
             do {
                 _ = try await transactionService.createTransaction(transaction)
+                NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
                 loadTransactions()
             } catch {
                 await MainActor.run {
@@ -286,11 +287,12 @@ struct TransactionsListView: View {
             }
         }
     }
-    
+
     private func updateTransaction(_ transaction: Transaction) {
         Task {
             do {
                 _ = try await transactionService.updateTransaction(transaction)
+                NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
                 loadTransactions()
             } catch {
                 await MainActor.run {
@@ -300,11 +302,12 @@ struct TransactionsListView: View {
             }
         }
     }
-    
+
     private func deleteTransaction(id: Int) {
         Task {
             do {
                 try await transactionService.deleteTransaction(id: id)
+                NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
                 loadTransactions()
             } catch {
                 await MainActor.run {

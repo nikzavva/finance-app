@@ -21,7 +21,8 @@ struct CreateAccountView: View {
                 AmountTextField(
                     amount: $amount,
                     previousAmount: $previousAmount,
-                    isFocused: $isAmountFocused
+                    isFocused: $isAmountFocused,
+                    maxAmount: Constants.maxAmountBankAccount
                 )
                 
                 HStack {
