@@ -80,11 +80,8 @@ struct TransactionsListView: View {
                 )
             }
             .onAppear {
-                selectedCategory = nil
                 loadCategories()
-                if case .idle = state {
-                    loadTransactions()
-                }
+                loadTransactions()
             }
             .onChange(of: selectedDate) {
                 loadTransactions()
@@ -172,6 +169,10 @@ struct TransactionsListView: View {
                     }
                 }
             }
+        }
+        .refreshable {
+            selectedCategory = nil
+            loadTransactions()
         }
     }
     

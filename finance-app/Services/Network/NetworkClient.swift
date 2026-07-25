@@ -51,6 +51,13 @@ final class NetworkClient {
     let encoder: JSONEncoder
     let decoder: JSONDecoder
     
+    private let retryMinDelay: TimeInterval = 2.0
+    private let retryMaxDelay: TimeInterval = 120.0
+    private let retryFactor: Double = 1.5
+    private let retryJitter: Double = 0.05
+    private let maxRetries: Int = 5
+    private let retryStatusCodes: Set<Int> = [500, 502, 503, 504, 408, 429]
+    
     private init() {
         self.token = "23708b59ca865cb482ce0552c1cae0cf"
         
@@ -79,16 +86,78 @@ final class NetworkClient {
         queryItems: [URLQueryItem]? = nil
     ) async throws -> T {
         let urlRequest = try buildRequest(endpoint: endpoint, method: method, body: body, queryItems: queryItems)
-        let (data, response) = try await performRequest(urlRequest)
+        let (data, response) = try await performRequestWithRetry(urlRequest)
         return try decode(T.self, from: data, response: response)
     }
     
     func delete(endpoint: String, queryItems: [URLQueryItem]? = nil) async throws {
         let urlRequest = try buildRequest(endpoint: endpoint, method: .delete, body: nil as String?, queryItems: queryItems)
-        let (data, response) = try await performRequest(urlRequest)
+        let (data, response) = try await performRequestWithRetry(urlRequest)
         try validateResponse(response, data: data)
     }
     
+    private func performRequestWithRetry(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        var attempt = 0
+        var lastError: Error?
+        
+        while attempt <= maxRetries {
+            do {
+                let (data, response) = try await performRequest(request)
+                
+                if let httpResponse = response as? HTTPURLResponse,
+                   retryStatusCodes.contains(httpResponse.statusCode),
+                   attempt < maxRetries {
+                    let delay = calculateDelay(attempt: attempt)
+                    #if DEBUG
+                    print("🔄 Retry #\(attempt + 1) for \(request.url?.path ?? "") after \(String(format: "%.2f", delay))s (HTTP \(httpResponse.statusCode))")
+                    #endif
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    attempt += 1
+                    continue
+                }
+                
+                return (data, response)
+            } catch let error as NetworkError {
+                switch error {
+                case .networkUnavailable:
+                    if attempt < maxRetries {
+                        let delay = calculateDelay(attempt: attempt)
+                        #if DEBUG
+                        print("🔄 Retry #\(attempt + 1) for \(request.url?.path ?? "") after \(String(format: "%.2f", delay))s (network error)")
+                        #endif
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        attempt += 1
+                        lastError = error
+                        continue
+                    }
+                    throw error
+                default:
+                    throw error
+                }
+            } catch {
+                if attempt < maxRetries {
+                    let delay = calculateDelay(attempt: attempt)
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    attempt += 1
+                    lastError = error
+                    continue
+                }
+                throw error
+            }
+        }
+        
+        throw lastError ?? NetworkError.noData
+    }
+    
+    private func calculateDelay(attempt: Int) -> TimeInterval {
+        let baseDelay = retryMinDelay * pow(retryFactor, Double(attempt))
+        let cappedDelay = min(retryMaxDelay, baseDelay)
+        
+        let jitterAmount = cappedDelay * retryJitter * Double.random(in: 0...1)
+        
+        return cappedDelay + jitterAmount
+    }
+        
     private func buildRequest<R: Encodable>(
         endpoint: String,
         method: HTTPMethod,
