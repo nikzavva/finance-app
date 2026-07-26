@@ -9,7 +9,7 @@ struct BankAccountRow: View {
             HStack {
                 Text(account.emoji)
                     .font(.title2)
-                    .frame(width: UIConstants.Sizes.categoryIcon, height: UIConstants.Sizes.categoryIcon)
+                    .frame(width: UIConstants.Sizes.icon, height: UIConstants.Sizes.icon)
                     .overlay(
                         Circle()
                             .stroke(Color(.systemGray4))

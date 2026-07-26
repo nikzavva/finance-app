@@ -9,6 +9,6 @@ struct FinanceApp: App {
         WindowGroup {
             FinanceAppView()
         }
-        .modelContainer(storageManager.container)
+        .modelContainer(storageManager.swiftDataContainer)
     }
 }

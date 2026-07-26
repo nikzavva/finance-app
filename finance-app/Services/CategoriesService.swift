@@ -2,11 +2,7 @@ import Foundation
 
 final class CategoriesService {
     private let network = NetworkClient.shared
-    private let storage: CategoriesStorage
-    
-    init() {
-        self.storage = StorageManager.shared.categoriesStorage
-    }
+    private var storage: CategoriesStorage { StorageManager.shared.categoriesStorage }
     
     func fetchAllCategories() async -> [Category] {
         guard NetworkMonitor.shared.isConnected else {

@@ -21,7 +21,7 @@ struct FinanceAppView: View {
                         .environment(\.symbolVariants, .none)
                 }
         }
-        .tint(Color("AccentColor"))
+        .tint(Color.accentColor)
     }
 }
 

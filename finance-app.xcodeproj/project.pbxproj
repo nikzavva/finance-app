@@ -25,6 +25,7 @@
 		C7F4FF813002CDE700CBBAA4 /* Exceptions for "finance-app" folder in "finance-app" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Storage/CoreData/FinanceModel.xcdatamodeld,
 				Tests/TransactionTests.swift,
 			);
 			target = C720720F30028817003A3428 /* finance-app */;
@@ -38,11 +39,22 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		C769D3BA3016461E0010E1BD /* Exceptions for "finance-app" folder in "Copy Bundle Resources" phase from "finance-app" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = C720720E30028817003A3428 /* Resources */;
+			membershipExceptions = (
+				Storage/CoreData/FinanceModel.xcdatamodeld,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C720721230028817003A3428 /* finance-app */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				C7F4FF813002CDE700CBBAA4 /* Exceptions for "finance-app" folder in "finance-app" target */,
+				C769D3BA3016461E0010E1BD /* Exceptions for "finance-app" folder in "Copy Bundle Resources" phase from "finance-app" target */,
 				C7F4FF903002CE6500CBBAA4 /* Exceptions for "finance-app" folder in "finance-appTests" target */,
 			);
 			path = "finance-app";

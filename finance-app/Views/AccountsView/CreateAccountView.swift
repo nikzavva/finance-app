@@ -45,24 +45,24 @@ struct CreateAccountView: View {
                     Text("Иконка")
                         .font(.body)
                         .foregroundColor(.primary)
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack {
                             ForEach(popularEmojis, id: \.self) { emojiItem in
                                 Button {
                                     emoji = emojiItem
                                 } label: {
                                     Text(emojiItem)
                                         .font(.title2)
-                                        .frame(width: 40, height: 40)
-                                        .background(emoji == emojiItem ? Color.accentColor.opacity(0.2) : Color.clear)
+                                        .frame(width: UIConstants.Sizes.icon, height: UIConstants.Sizes.icon)
+                                        .background(emoji == emojiItem ? Color.accentColor : Color.clear)
                                         .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                     }
-                    .frame(maxWidth: 180)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding(.horizontal)
                 .padding(.vertical)

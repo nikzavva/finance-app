@@ -150,7 +150,7 @@ struct CreateTransactionView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
-            .alert("Заполните все поля", isPresented: $showValidationError) {
+            .alert("Ошибка создания данных", isPresented: $showValidationError) {
                 Button("ОК", role: .cancel) {}
             } message: {
                 if let amount = AmountTextField.parseAmount(self.amount),

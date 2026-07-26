@@ -108,9 +108,6 @@ final class NetworkClient {
                    retryStatusCodes.contains(httpResponse.statusCode),
                    attempt < maxRetries {
                     let delay = calculateDelay(attempt: attempt)
-                    #if DEBUG
-                    print("🔄 Retry #\(attempt + 1) for \(request.url?.path ?? "") after \(String(format: "%.2f", delay))s (HTTP \(httpResponse.statusCode))")
-                    #endif
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     attempt += 1
                     continue

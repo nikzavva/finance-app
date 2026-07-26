@@ -13,8 +13,8 @@ struct AddButton: View {
                         .font(.largeTitle)
                         .fontWeight(.medium)
                         .foregroundColor(.white)
-                        .frame(width: UIConstants.Sizes.addButton, height: UIConstants.Sizes.addButton)
-                        .background(Color("AccentColor"))
+                        .frame(width: UIConstants.Sizes.button, height: UIConstants.Sizes.button)
+                        .background(Color.accentColor)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)

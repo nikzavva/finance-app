@@ -1,19 +1,15 @@
 import Foundation
 
 final class TransactionsService {
+    private static var syncTask: Task<Void, Never>?
+
     private let network = NetworkClient.shared
-    private let storage: TransactionsStorage
-    private let accountsStorage: AccountsStorage
-    private let backup: BackupStorage
-    
-    init() {
-        self.storage = StorageManager.shared.transactionsStorage
-        self.accountsStorage = StorageManager.shared.accountsStorage
-        self.backup = StorageManager.shared.backupStorage
-    }
+    private var storage: TransactionsStorage { StorageManager.shared.transactionsStorage }
+    private var accountsStorage: AccountsStorage { StorageManager.shared.accountsStorage }
+    private var backup: BackupStorage { StorageManager.shared.backupStorage }
     
     func fetchTransactions(from startDate: Date, to endDate: Date) async -> [Transaction] {
-        await syncBackupToBackend()
+        await performSync()
         
         let local = (try? await storage.fetchAll()) ?? []
         let backupTransactions = (try? backup.fetchAllTransactionActions())?
@@ -21,12 +17,14 @@ final class TransactionsService {
             .map { $0.toTransaction() } ?? []
         
         guard NetworkMonitor.shared.isConnected else {
+            NetworkMonitor.shared.markOfflineDataUsed()
             return mergeAndFilter(local: local, backup: backupTransactions, from: startDate, to: endDate)
         }
         
         do {
             let accounts = try await network.get(endpoint: "/accounts") as [BankAccountDTO]
             guard !accounts.isEmpty else {
+                NetworkMonitor.shared.markDataFresh()
                 return mergeAndFilter(local: local, backup: backupTransactions, from: startDate, to: endDate)
             }
             
@@ -59,13 +57,39 @@ final class TransactionsService {
                 }
             }
             
-            try? await storage.deleteAll()
+            let backupActions = (try? backup.fetchAllTransactionActions()) ?? []
+            let serverTransactionIDs = Set(serverTransactions.map(\.id))
+            let protectedTransactionIDs = Set(backupActions.map(\.transactionId))
+
+            let staleLocalTransactionIDs: Set<Int> = Set(local.compactMap { transaction in
+                guard !isTemporaryTransactionID(transaction.id),
+                      !protectedTransactionIDs.contains(transaction.id),
+                      transaction.transactionDate >= startDate,
+                      transaction.transactionDate < endDate,
+                      !serverTransactionIDs.contains(transaction.id) else {
+                    return nil
+                }
+                return transaction.id
+            })
+
+            for id in staleLocalTransactionIDs {
+                try? await storage.delete(byId: id)
+            }
+
             for transaction in serverTransactions {
-                try? await storage.create(transaction)
+                try? await storage.update(transaction)
             }
             
-            return mergeAndFilter(local: serverTransactions, backup: backupTransactions, from: startDate, to: endDate)
+            NetworkMonitor.shared.markDataFresh()
+            let reconciledLocal = local.filter { !staleLocalTransactionIDs.contains($0.id) }
+            return mergeAndFilter(
+                local: reconciledLocal + serverTransactions,
+                backup: backupTransactions,
+                from: startDate,
+                to: endDate
+            )
         } catch {
+            NetworkMonitor.shared.markOfflineDataUsed()
             return mergeAndFilter(local: local, backup: backupTransactions, from: startDate, to: endDate)
         }
     }
@@ -183,12 +207,36 @@ final class TransactionsService {
         }
     }
     
+    private func performSync() async {
+        if let task = Self.syncTask {
+            await task.value
+            return
+        }
+        
+        Self.syncTask = Task {
+            defer { Self.syncTask = nil }
+            let accountsService = BankAccountsService()
+            _ = await accountsService.fetchAccounts()
+            await syncBackupToBackend()
+        }
+        
+        await Self.syncTask?.value
+    }
+    
     private func balanceDelta(for transaction: Transaction) -> Decimal {
         transaction.direction == .income ? transaction.amount : -transaction.amount
     }
+
+    private func isTemporaryTransactionID(_ id: Int) -> Bool {
+        id > 1_000_000_000
+    }
     
     private func adjustAccountBalance(accountId: Int, delta: Decimal) async {
-        guard var account = try? await accountsStorage.fetch(byId: accountId) else { return }
+        guard var account = try? await accountsStorage.fetch(byId: accountId) else {
+            print("❌ Account \(accountId) not found for balance adjustment")
+            return
+        }
+        print("📊 Adjusting balance for account \(accountId): \(account.balance) + \(delta)")
         account = BankAccount(
             id: account.id,
             userId: account.userId,
@@ -199,7 +247,13 @@ final class TransactionsService {
             createdAt: account.createdAt,
             updatedAt: ISO8601DateFormatter().string(from: Date())
         )
-        try? await accountsStorage.update(account)
+        print("📊 New balance: \(account.balance)")
+        do {
+            try await accountsStorage.update(account)
+            print("✅ Balance updated successfully")
+        } catch {
+            print("❌ Failed to update balance: \(error)")
+        }
     }
     
     private func mergeAndFilter(local: [Transaction], backup: [Transaction], from startDate: Date, to endDate: Date) -> [Transaction] {
@@ -221,10 +275,37 @@ final class TransactionsService {
         for action in actions {
             let transaction = action.toTransaction()
             
-            do {
+            if isTemporaryTransactionID(transaction.id) {
                 switch action.actionType {
                 case .create:
                     let request = TransactionRequestDTO(from: transaction)
+                    do {
+                        let dto: TransactionCreatedDTO = try await network.request(
+                            endpoint: "/transactions",
+                            method: .post,
+                            body: request
+                        )
+                        let created = dto.toDomain(direction: transaction.direction)
+                        try? await storage.delete(byId: transaction.id)
+                        try? await storage.create(created)
+                        try? backup.removeTransactionAction(byId: transaction.id)
+                    } catch {
+                        print("❌ Failed to sync create transaction: \(error)")
+                    }
+                    
+                case .update:
+                    try? backup.removeTransactionAction(byId: transaction.id)
+                    
+                case .delete:
+                    try? backup.removeTransactionAction(byId: transaction.id)
+                }
+                continue
+            }
+            
+            switch action.actionType {
+            case .create:
+                let request = TransactionRequestDTO(from: transaction)
+                do {
                     let dto: TransactionCreatedDTO = try await network.request(
                         endpoint: "/transactions",
                         method: .post,
@@ -234,9 +315,13 @@ final class TransactionsService {
                     try? await storage.delete(byId: transaction.id)
                     try? await storage.create(created)
                     try? backup.removeTransactionAction(byId: transaction.id)
-                    
-                case .update:
-                    let request = TransactionRequestDTO(from: transaction)
+                } catch {
+                    print("❌ Failed to sync create transaction: \(error)")
+                }
+                
+            case .update:
+                let request = TransactionRequestDTO(from: transaction)
+                do {
                     let dto: TransactionCreatedDTO = try await network.request(
                         endpoint: "/transactions/\(transaction.id)",
                         method: .put,
@@ -245,14 +330,18 @@ final class TransactionsService {
                     let updated = dto.toDomain(direction: transaction.direction)
                     try? await storage.update(updated)
                     try? backup.removeTransactionAction(byId: transaction.id)
-                    
-                case .delete:
+                } catch {
+                    print("❌ Failed to sync update transaction: \(error)")
+                }
+                
+            case .delete:
+                do {
                     try await network.delete(endpoint: "/transactions/\(transaction.id)")
                     try? await storage.delete(byId: transaction.id)
                     try? backup.removeTransactionAction(byId: transaction.id)
+                } catch {
+                    print("❌ Failed to sync delete transaction: \(error)")
                 }
-            } catch {
-                break
             }
         }
         

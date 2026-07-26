@@ -43,8 +43,7 @@ struct BankAccountsView: View {
                     .padding(.bottom)
                     ScrollView {
                         LazyVStack(spacing: .zero) {
-                            Divider()
-                                .padding(.horizontal)
+                            if !accounts.isEmpty { Divider().padding(.horizontal) }
                             ForEach(accounts, id: \.id) { account in
                                 BankAccountRow(account: account, formatter: formatter)
                                     .onTapGesture {
@@ -59,6 +58,7 @@ struct BankAccountsView: View {
                 }
                 .background(Color(.systemBackground))
                 AddButton { showAddAccount = true }
+                OfflineIndicator()
             }
             .onShake {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -82,7 +82,10 @@ struct BankAccountsView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                Text("Настройки (заглушка)")
+                NavigationStack {
+                    SettingsView()
+                }
+                .presentationDetents([.medium])
             }
             .sheet(item: $selectedAccount) { account in
                 BalanceAdjustmentView(

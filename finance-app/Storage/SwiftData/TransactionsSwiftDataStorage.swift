@@ -16,12 +16,11 @@ final class TransactionsSwiftDataStorage: TransactionsStorage {
     }
     
     func fetch(byIds ids: [Int]) async throws -> [Transaction] {
-        let context = ModelContext(container)
-        let descriptor = FetchDescriptor<TransactionEntity>()
-        let entities = try context.fetch(descriptor)
-        return entities
-            .filter { ids.contains($0.id) }
-            .map { $0.toDomain() }
+        let descriptor = FetchDescriptor<TransactionEntity>(
+            predicate: #Predicate { ids.contains($0.id) }
+        )
+        let results = try container.mainContext.fetch(descriptor)
+        return results.map { $0.toDomain() }
     }
     
     func create(_ transaction: Transaction) async throws {

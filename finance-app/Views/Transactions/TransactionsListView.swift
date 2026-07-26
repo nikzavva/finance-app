@@ -31,6 +31,7 @@ struct TransactionsListView: View {
             ZStack {
                 mainContent
                 AddButton { showCreateTransaction = true }
+                OfflineIndicator()
             }
             .toolbar {
                 CommonToolbar(
@@ -46,8 +47,6 @@ struct TransactionsListView: View {
                     onCreate: { newTransaction in
                         Task {
                             await transactionService.createTransaction(newTransaction)
-                            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
-                            loadTransactions()
                         }
                     }
                 )
@@ -75,21 +74,16 @@ struct TransactionsListView: View {
                     onSave: { updated in
                         Task {
                             await transactionService.updateTransaction(updated)
-                            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
-                            loadTransactions()
                         }
                     },
                     onDelete: { id in
                         Task {
                             await transactionService.deleteTransaction(id: id)
-                            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
-                            loadTransactions()
                         }
                     }
                 )
             }
             .onAppear {
-                selectedCategory = nil
                 loadCategories()
                 loadTransactions()
             }
@@ -100,6 +94,9 @@ struct TransactionsListView: View {
                 loadTransactions()
             }
             .onChange(of: selectedCategory) {
+                loadTransactions()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .transactionsDidChange)) { _ in
                 loadTransactions()
             }
         }
@@ -137,6 +134,10 @@ struct TransactionsListView: View {
                         }
                     }
                 }
+            }
+            .refreshable {
+                selectedCategory = nil
+                loadTransactions()
             }
         }
         .background(Color(.systemBackground))
