@@ -1,0 +1,3 @@
+enum AppRoute {
+    case analytics
+}
