@@ -6,7 +6,3 @@ branch_protection:
         - prevent_deletion
         - prevent_force_push
         - prevent_non_pr_changes
-
-pull_request: 
-  branch_cleanup: 
-    matches: ["**"]
