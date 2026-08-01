@@ -10,13 +10,16 @@ struct BankAccountsView: View {
     @State private var showAddAccount = false
     @State private var selectedAccount: BankAccount?
     @State private var isBalanceHidden: Bool = false
+    @State private var showDeleteError = false
     
     private let accountsService = BankAccountsService()
+    private let transactionService = TransactionsService()
+    
     private let formatter: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.groupingSeparator = " "
-        f.minimumFractionDigits = 2
+        f.minimumFractionDigits = 0
         f.maximumFractionDigits = 2
         return f
     }()
@@ -29,7 +32,6 @@ struct BankAccountsView: View {
                         Text("баланс, всего")
                             .font(.callout)
                             .foregroundColor(.secondary)
-                        
                         SpoilerView(isHidden: isBalanceHidden) {
                             Text(formatAmount(totalBalance) + " ₽")
                                 .font(.system(size: UIConstants.Sizes.totalAmountFontSize, weight: .bold, design: .rounded))
@@ -39,11 +41,9 @@ struct BankAccountsView: View {
                     .padding(.horizontal)
                     .padding(.top)
                     .padding(.bottom)
-                    
                     ScrollView {
                         LazyVStack(spacing: .zero) {
-                            Divider()
-                                .padding(.horizontal)
+                            if !accounts.isEmpty { Divider().padding(.horizontal) }
                             ForEach(accounts, id: \.id) { account in
                                 BankAccountRow(account: account, formatter: formatter)
                                     .onTapGesture {
@@ -57,8 +57,8 @@ struct BankAccountsView: View {
                     }
                 }
                 .background(Color(.systemBackground))
-                
                 AddButton { showAddAccount = true }
+                OfflineIndicator()
             }
             .onShake {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -74,10 +74,18 @@ struct BankAccountsView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showAddAccount) {
-                Text("Добавление счета (заглушка)")
+                CreateAccountView { newAccount in
+                    Task {
+                        _ = await accountsService.createAccount(newAccount)
+                        await loadAccounts()
+                    }
+                }
             }
             .sheet(isPresented: $showSettings) {
-                Text("Настройки (заглушка)")
+                NavigationStack {
+                    SettingsView()
+                }
+                .presentationDetents([.medium])
             }
             .sheet(item: $selectedAccount) { account in
                 BalanceAdjustmentView(
@@ -86,6 +94,9 @@ struct BankAccountsView: View {
                     formatter: formatter,
                     onSave: { newAmount, newDate in
                         adjustBalance(for: account, newAmount: newAmount, newDate: newDate)
+                    },
+                    onDelete: { id in
+                        deleteAccount(id: id)
                     }
                 )
             }
@@ -97,6 +108,17 @@ struct BankAccountsView: View {
             }
             .onAppear {
                 Task { await loadAccounts() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .transactionsDidChange)) { _ in
+                Task { await loadAccounts() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .accountsDidChange)) { _ in
+                Task { await loadAccounts() }
+            }
+            .alert("Нельзя удалить счёт", isPresented: $showDeleteError) {
+                Button("ОК", role: .cancel) {}
+            } message: {
+                Text("Сначала удалите все операции по этому счёту")
             }
         }
     }
@@ -128,7 +150,28 @@ struct BankAccountsView: View {
             )
             _ = await accountsService.updateAccount(updated)
             await loadAccounts()
-            selectedAccount = nil
+            await MainActor.run {
+                selectedAccount = nil
+            }
+        }
+    }
+    
+    private func deleteAccount(id: Int) {
+        Task {
+            let transactions = await transactionService.fetchTransactionsForAccount(id: id)
+            
+            await MainActor.run {
+                if transactions.isEmpty {
+                    Task {
+                        await accountsService.deleteAccount(id: id)
+                        await loadAccounts()
+                        selectedAccount = nil
+                    }
+                } else {
+                    showDeleteError = true
+                    selectedAccount = nil
+                }
+            }
         }
     }
 }

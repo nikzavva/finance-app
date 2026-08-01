@@ -5,46 +5,33 @@ struct BalanceAdjustmentView: View {
     let appCurrency: String
     let formatter: NumberFormatter
     let onSave: (Decimal, Date) -> Void
+    let onDelete: (Int) -> Void
     
     @Environment(\.dismiss) private var dismiss
     @State private var amount: String = ""
     @State private var previousAmount: String = ""
     @State private var date: Date = Date()
+    @State private var showDeleteConfirmation = false
     @FocusState private var isAmountFocused: Bool
-    
-    private let maxAmount: Decimal = 9_999_999
     
     var body: some View {
         NavigationStack {
             VStack(spacing: .zero) {
-                TextField("", text: $amount)
-                    .keyboardType(.decimalPad)
-                    .focused($isAmountFocused)
-                    .font(.system(size: UIConstants.Sizes.totalAmountFontSize, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top)
-                    .padding(.bottom)
-                    .onChange(of: amount) { _, newValue in
-                        formatInput(newValue)
-                    }
-                
-                GeometryReader { geometry in
-                    Rectangle()
-                        .fill(Color(.systemGray3))
-                        .frame(width: geometry.size.width * 2/3, height: 1)
-                        .frame(maxWidth: .infinity)
-                }
-                .frame(height: 1)
-                .padding(.bottom)
+                AmountTextField(
+                    amount: $amount,
+                    previousAmount: $previousAmount,
+                    isFocused: $isAmountFocused,
+                    maxAmount: Constants.maxAmountBankAccount
+                )
                 
                 HStack {
                     Text("Дата и время")
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    DatePicker("", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
+                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
                 .padding(.vertical)
@@ -74,30 +61,40 @@ struct BalanceAdjustmentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
                             .font(.body)
-                            .foregroundColor(.primary)
+                            .foregroundColor(.red)
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        guard let decimalAmount = parseAmount(amount) else { return }
+                        guard let decimalAmount = AmountTextField.parseAmount(amount) else { return }
                         onSave(decimalAmount, date)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body)
-                            .foregroundColor(parseAmount(amount) == nil ? .gray : .accentColor)
+                            .foregroundColor(.accentColor)
                     }
-                    .disabled(parseAmount(amount) == nil)
                 }
             }
             .onAppear {
-                let initial = formatAmount(account.balance)
+                let initial = AmountTextField.formatAmount(account.balance, formatter: formatter)
                 amount = initial
                 previousAmount = initial
+            }
+            .alert("Удалить счёт?", isPresented: $showDeleteConfirmation) {
+                Button("Удалить", role: .destructive) {
+                    onDelete(account.id)
+                    dismiss()
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("Счёт будет удалён. Это действие нельзя отменить")
             }
             .gesture(
                 DragGesture()
@@ -107,46 +104,5 @@ struct BalanceAdjustmentView: View {
             )
         }
         .presentationDetents([.medium])
-    }
-    
-    private func formatAmount(_ value: Decimal) -> String {
-        let number = value as NSDecimalNumber
-        return formatter.string(from: number) ?? "0"
-    }
-    
-    private func parseAmount(_ string: String) -> Decimal? {
-        let cleaned = string.replacingOccurrences(of: " ", with: "")
-                          .replacingOccurrences(of: ",", with: ".")
-        return Decimal(string: cleaned)
-    }
-    
-    private func formatInput(_ input: String) {
-        let filtered = input.replacingOccurrences(
-            of: "[^\\d\\s,.]",
-            with: "",
-            options: .regularExpression
-        )
-        
-        let cleaned = filtered.replacingOccurrences(of: " ", with: "")
-                              .replacingOccurrences(of: ",", with: ".")
-        
-        if cleaned.isEmpty {
-            amount = "0"
-            previousAmount = "0"
-            return
-        }
-        
-        guard let decimal = Decimal(string: cleaned) else {
-            return
-        }
-        
-        if decimal > maxAmount {
-            amount = previousAmount
-            return
-        }
-        
-        let formatted = formatAmount(decimal)
-        amount = formatted
-        previousAmount = formatted
     }
 }

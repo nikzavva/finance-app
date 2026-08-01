@@ -21,11 +21,10 @@ struct FinanceAppView: View {
                         .environment(\.symbolVariants, .none)
                 }
         }
-        .tint(Color("AccentColor"))
+        .tint(Color.accentColor)
     }
 }
 
 #Preview {
     FinanceAppView()
-        .environment(\.locale, Locale(identifier: "ru_RU"))
 }

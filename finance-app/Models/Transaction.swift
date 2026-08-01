@@ -1,7 +1,7 @@
 import Foundation
 
-struct Transaction {
-    let id: Int
+struct Transaction: Identifiable {
+    var id: Int
     let accountId: Int
     let categoryId: Int
     let amount: Decimal
