@@ -28,7 +28,7 @@ final class CreateAccountViewModel: ObservableObject {
             name: name.trimmingCharacters(in: .whitespaces),
             emoji: emoji,
             balance: decimalAmount,
-            currency: "RUB",
+            currency: AppSettings.currentCurrency.rawValue,
             createdAt: dateString,
             updatedAt: dateString
         )

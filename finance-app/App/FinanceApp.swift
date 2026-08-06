@@ -4,10 +4,16 @@ import SwiftData
 @main
 struct FinanceApp: App {
     let storageManager = StorageManager.shared
+    @StateObject private var settings = AppSettings()
+    @StateObject private var security = AppSecurityManager()
     
     var body: some Scene {
         WindowGroup {
             AppContentView(storageManager: storageManager)
+                .environmentObject(settings)
+                .environmentObject(security)
+                .environment(\.locale, settings.language.locale)
+                .preferredColorScheme(settings.theme.colorScheme)
         }
         .modelContainer(storageManager.swiftDataContainer)
     }
@@ -15,6 +21,8 @@ struct FinanceApp: App {
 
 private struct AppContentView: View {
     @StateObject private var viewModel: AppLaunchViewModel
+    @EnvironmentObject private var security: AppSecurityManager
+    @Environment(\.scenePhase) private var scenePhase
 
     init(storageManager: StorageManager) {
         _viewModel = StateObject(
@@ -31,8 +39,12 @@ private struct AppContentView: View {
                 .background(Color(uiColor: .systemBackground))
                 .ignoresSafeArea()
             } else {
-                FinanceAppView()
-                    .networkErrorAlert()
+                if security.isLocked {
+                    AppLockView()
+                } else {
+                    FinanceAppView()
+                        .networkErrorAlert()
+                }
             }
         }
         .task {
@@ -42,6 +54,16 @@ private struct AppContentView: View {
             Button("ОК", role: .cancel) {}
         } message: {
             Text(viewModel.migrationErrorMessage)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                security.unlockWithBiometricsIfPossible()
+            case .background:
+                security.lockIfNeeded()
+            default:
+                break
+            }
         }
     }
 }

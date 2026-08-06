@@ -4,6 +4,7 @@ struct CreateAccountView: View {
     let onCreate: (BankAccount) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel = CreateAccountViewModel()
     @FocusState private var isNameFocused: Bool
     @FocusState private var isAmountFocused: Bool
@@ -82,7 +83,7 @@ struct CreateAccountView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text("Руб.")
+                    Text(settings.currency.title(for: settings.language))
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
