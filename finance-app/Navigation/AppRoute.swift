@@ -1,3 +1,3 @@
-enum AppRoute {
-    case analytics
+enum AppRoute: Hashable {
+    case analytics(Direction)
 }

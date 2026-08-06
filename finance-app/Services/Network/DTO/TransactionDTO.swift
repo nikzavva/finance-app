@@ -92,3 +92,25 @@ struct TransactionCreatedDTO: Codable {
         )
     }
 }
+
+enum TransactionResponseDTO: Decodable {
+    case detailed(TransactionDTO)
+    case compact(TransactionCreatedDTO)
+
+    init(from decoder: Decoder) throws {
+        if let detailed = try? TransactionDTO(from: decoder) {
+            self = .detailed(detailed)
+        } else {
+            self = .compact(try TransactionCreatedDTO(from: decoder))
+        }
+    }
+
+    nonisolated func toDomain(fallbackDirection: Direction) -> Transaction {
+        switch self {
+        case .detailed(let transaction):
+            return transaction.toDomain()
+        case .compact(let transaction):
+            return transaction.toDomain(direction: fallbackDirection)
+        }
+    }
+}

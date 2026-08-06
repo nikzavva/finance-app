@@ -4,23 +4,16 @@ struct CreateAccountView: View {
     let onCreate: (BankAccount) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var name: String = ""
-    @State private var emoji: String = "💰"
-    @State private var amount: String = "0"
-    @State private var previousAmount: String = "0"
-    @State private var date: Date = Date()
-    @State private var showValidationError = false
+    @StateObject private var viewModel = CreateAccountViewModel()
     @FocusState private var isNameFocused: Bool
     @FocusState private var isAmountFocused: Bool
-    
-    private let popularEmojis = ["💰", "💳", "💵", "💸", "🏦", "🏠", "🚗", "🎒", "📱", "🎯", "🎁", "💼", "🍔", "☕", "🏥", "✈️", "🛒", "💡", "📚", "🎬"]
     
     var body: some View {
         NavigationStack {
             VStack(spacing: .zero) {
                 AmountTextField(
-                    amount: $amount,
-                    previousAmount: $previousAmount,
+                    amount: $viewModel.amount,
+                    previousAmount: $viewModel.previousAmount,
                     isFocused: $isAmountFocused,
                     maxAmount: Constants.maxAmountBankAccount
                 )
@@ -30,7 +23,7 @@ struct CreateAccountView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    TextField("", text: $name, prompt: Text("Например, основной").foregroundColor(.secondary))
+                    TextField("", text: $viewModel.name, prompt: Text("Например, основной").foregroundColor(.secondary))
                         .multilineTextAlignment(.trailing)
                         .focused($isNameFocused)
                         .font(.body)
@@ -48,14 +41,14 @@ struct CreateAccountView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
-                            ForEach(popularEmojis, id: \.self) { emojiItem in
+                            ForEach(viewModel.popularEmojis, id: \.self) { emojiItem in
                                 Button {
-                                    emoji = emojiItem
+                                    viewModel.emoji = emojiItem
                                 } label: {
                                     Text(emojiItem)
                                         .font(.title2)
                                         .frame(width: UIConstants.Sizes.icon, height: UIConstants.Sizes.icon)
-                                        .background(emoji == emojiItem ? Color.accentColor : Color.clear)
+                                        .background(viewModel.emoji == emojiItem ? Color.accentColor : Color.clear)
                                         .cornerRadius(8)
                                 }
                                 .buttonStyle(.plain)
@@ -75,7 +68,7 @@ struct CreateAccountView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    DatePicker("", selection: $date, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("", selection: $viewModel.date, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                         .labelsHidden()
                 }
                 .padding(.horizontal)
@@ -115,19 +108,18 @@ struct CreateAccountView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        if isValid {
-                            save()
-                        } else {
-                            showValidationError = true
-                        }
+                        guard let account = viewModel.submit() else { return }
+                        onCreate(account)
+                        dismiss()
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body)
                             .foregroundColor(.accentColor)
                     }
+                    .disabled(viewModel.isSubmitting)
                 }
             }
-            .alert("Заполните все поля", isPresented: $showValidationError) {
+            .alert("Заполните все поля", isPresented: $viewModel.showValidationError) {
                 Button("ОК", role: .cancel) {}
             } message: {
                 Text("Название и сумма обязательны")
@@ -141,31 +133,5 @@ struct CreateAccountView: View {
             )
         }
         .presentationDetents([.medium])
-    }
-    
-    private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        AmountTextField.parseAmount(amount) != nil
-    }
-    
-    private func save() {
-        guard let decimalAmount = AmountTextField.parseAmount(amount) else { return }
-        
-        let dateFormatter = ISO8601DateFormatter()
-        let dateString = dateFormatter.string(from: date)
-        
-        let newAccount = BankAccount(
-            id: 0,
-            userId: 0,
-            name: name.trimmingCharacters(in: .whitespaces),
-            emoji: emoji,
-            balance: decimalAmount,
-            currency: "RUB",
-            createdAt: dateString,
-            updatedAt: dateString
-        )
-        
-        onCreate(newAccount)
-        dismiss()
     }
 }

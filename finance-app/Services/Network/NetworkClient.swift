@@ -75,26 +75,111 @@ final class NetworkClient {
     
     func get<T: Decodable>(
         endpoint: String,
-        queryItems: [URLQueryItem]? = nil
+        queryItems: [URLQueryItem]? = nil,
+        reportsActivity: Bool = true,
+        presentsError: Bool = true
     ) async throws -> T {
-        try await request(endpoint: endpoint, method: .get, body: nil as String?, queryItems: queryItems)
+        try await request(
+            endpoint: endpoint,
+            method: .get,
+            body: nil as String?,
+            queryItems: queryItems,
+            reportsActivity: reportsActivity,
+            presentsError: presentsError
+        )
     }
     
     func request<T: Decodable, R: Encodable>(
         endpoint: String,
         method: HTTPMethod,
         body: R? = nil,
-        queryItems: [URLQueryItem]? = nil
+        queryItems: [URLQueryItem]? = nil,
+        reportsActivity: Bool = true,
+        presentsError: Bool = true
     ) async throws -> T {
-        let urlRequest = try buildRequest(endpoint: endpoint, method: method, body: body, queryItems: queryItems)
-        let (data, response) = try await performRequestWithRetry(urlRequest)
-        return try decode(T.self, from: data, response: response)
+        if reportsActivity {
+            NetworkActivity.shared.beginRequest()
+        }
+        defer {
+            if reportsActivity {
+                NetworkActivity.shared.finishRequest()
+            }
+        }
+        do {
+            let urlRequest = try buildRequest(endpoint: endpoint, method: method, body: body, queryItems: queryItems)
+            let (data, response) = try await performRequestWithRetry(urlRequest)
+            return try decode(T.self, from: data, response: response)
+        } catch {
+            if presentsError, !(error is CancellationError) {
+                NetworkActivity.shared.present(error: error)
+            }
+            throw error
+        }
+    }
+
+    func send<R: Encodable>(
+        endpoint: String,
+        method: HTTPMethod,
+        body: R,
+        queryItems: [URLQueryItem]? = nil,
+        reportsActivity: Bool = true,
+        presentsError: Bool = true
+    ) async throws {
+        if reportsActivity {
+            NetworkActivity.shared.beginRequest()
+        }
+        defer {
+            if reportsActivity {
+                NetworkActivity.shared.finishRequest()
+            }
+        }
+
+        do {
+            let urlRequest = try buildRequest(
+                endpoint: endpoint,
+                method: method,
+                body: body,
+                queryItems: queryItems
+            )
+            let (data, response) = try await performRequestWithRetry(urlRequest)
+            try validateResponse(response, data: data)
+        } catch {
+            if presentsError, !(error is CancellationError) {
+                NetworkActivity.shared.present(error: error)
+            }
+            throw error
+        }
     }
     
-    func delete(endpoint: String, queryItems: [URLQueryItem]? = nil) async throws {
-        let urlRequest = try buildRequest(endpoint: endpoint, method: .delete, body: nil as String?, queryItems: queryItems)
-        let (data, response) = try await performRequestWithRetry(urlRequest)
-        try validateResponse(response, data: data)
+    func delete(
+        endpoint: String,
+        queryItems: [URLQueryItem]? = nil,
+        reportsActivity: Bool = true,
+        presentsError: Bool = true
+    ) async throws {
+        if reportsActivity {
+            NetworkActivity.shared.beginRequest()
+        }
+        do {
+            let urlRequest = try buildRequest(endpoint: endpoint, method: .delete, body: nil as String?, queryItems: queryItems)
+            let (data, response) = try await performRequestWithRetry(urlRequest)
+            try validateResponse(response, data: data)
+            if reportsActivity {
+                NetworkActivity.shared.finishRequest()
+            }
+        } catch NetworkError.notFound {
+            if reportsActivity {
+                NetworkActivity.shared.finishRequest()
+            }
+        } catch {
+            if reportsActivity {
+                NetworkActivity.shared.finishRequest()
+            }
+            if presentsError, !(error is CancellationError) {
+                NetworkActivity.shared.present(error: error)
+            }
+            throw error
+        }
     }
     
     private func performRequestWithRetry(_ request: URLRequest) async throws -> (Data, URLResponse) {
@@ -179,6 +264,10 @@ final class NetworkClient {
     private func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch is CancellationError {
+            throw CancellationError()
         } catch let error as URLError where error.code == .notConnectedToInternet || error.code == .networkConnectionLost {
             throw NetworkError.networkUnavailable(error)
         } catch {

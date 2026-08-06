@@ -1,28 +1,19 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("use_coredata") private var useCoreData = false
     @Environment(\.dismiss) private var dismiss
-    @State private var isMigrating = false
+    @StateObject private var viewModel = SettingsViewModel()
     
     var body: some View {
         Form {
             Section("Хранилище данных") {
-                Toggle("Использовать CoreData", isOn: $useCoreData)
-                    .disabled(isMigrating)
-                    .onChange(of: useCoreData) { _, newValue in
-                        Task {
-                            isMigrating = true
-                            await StorageManager.shared.switchStorage(
-                                to: newValue ? .coreData : .swiftData
-                            )
-                            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
-                            NotificationCenter.default.post(name: .accountsDidChange, object: nil)
-                            isMigrating = false
-                        }
+                Toggle("Использовать CoreData", isOn: $viewModel.useCoreData)
+                    .disabled(viewModel.isMigrating)
+                    .onChange(of: viewModel.useCoreData) { _, newValue in
+                        viewModel.requestStorageChange(to: newValue)
                     }
                 
-                if isMigrating {
+                if viewModel.isMigrating {
                     HStack {
                         ProgressView()
                         Text("Миграция данных...")
@@ -30,7 +21,7 @@ struct SettingsView: View {
                     }
                 }
                 
-                Text("Текущее: \(useCoreData ? "CoreData" : "SwiftData")")
+                Text("Текущее: \(viewModel.useCoreData ? "CoreData" : "SwiftData")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -41,6 +32,11 @@ struct SettingsView: View {
         }
         .navigationTitle("Настройки")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Ошибка миграции", isPresented: $viewModel.showMigrationError) {
+            Button("ОК", role: .cancel) {}
+        } message: {
+            Text(viewModel.migrationErrorMessage)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {

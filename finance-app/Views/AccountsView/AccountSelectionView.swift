@@ -4,20 +4,8 @@ struct AccountSelectionView: View {
     let onSelect: (BankAccount) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var accounts: [BankAccount] = []
-    @State private var searchText = ""
+    @StateObject private var viewModel = AccountSelectionViewModel()
     @FocusState private var isSearchFocused: Bool
-    
-    private let accountsService = BankAccountsService()
-    
-    private var filteredAccounts: [BankAccount] {
-        guard !searchText.isEmpty else { return accounts }
-        let words = searchText.lowercased().split(separator: " ").map(String.init)
-        return accounts.filter { account in
-            let name = account.name.lowercased()
-            return words.allSatisfy { name.contains($0) }
-        }
-    }
     
     var body: some View {
         NavigationStack {
@@ -26,7 +14,7 @@ struct AccountSelectionView: View {
                     LazyVStack(spacing: .zero) {
                         Divider()
                             .padding(.horizontal)
-                        ForEach(filteredAccounts, id: \.id) { account in
+                        ForEach(viewModel.filteredAccounts, id: \.id) { account in
                             Button {
                                 onSelect(account)
                                 dismiss()
@@ -55,7 +43,7 @@ struct AccountSelectionView: View {
                 }
             }
             .searchable(
-                text: $searchText,
+                text: $viewModel.searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
                 prompt: ""
             )
@@ -71,14 +59,10 @@ struct AccountSelectionView: View {
                     }
                 }
             }
-            .onAppear {
-                Task {
-                    let all = await accountsService.fetchAccounts()
-                    await MainActor.run {
-                        accounts = all
-                    }
-                }
+            .task {
+                await viewModel.loadAccounts()
             }
         }
+        .networkLoadingOverlay()
     }
 }

@@ -126,17 +126,10 @@ struct AmountTextField: View {
     }
     
     static func parseAmount(_ string: String) -> Decimal? {
-        if string.isEmpty || string == "0" {
-            return Decimal(0)
-        }
-        let separator = Locale.current.decimalSeparator ?? ","
-        let cleaned = string.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: separator, with: ".")
-        return Decimal(string: cleaned)
+        AmountInputFormatter.parse(string)
     }
     
     static func formatAmount(_ value: Decimal, formatter: NumberFormatter) -> String {
-        let number = value as NSDecimalNumber
-        return formatter.string(from: number) ?? "0"
+        AmountInputFormatter.format(value, with: formatter)
     }
 }

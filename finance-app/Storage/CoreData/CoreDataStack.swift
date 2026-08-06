@@ -21,12 +21,13 @@ final class CoreDataStack {
         persistentContainer.viewContext
     }
     
-    func saveContext() {
+    func saveContext() throws {
         if context.hasChanges {
             do {
                 try context.save()
             } catch {
-                print("Ошибка сохранения CoreData: \(error)")
+                context.rollback()
+                throw error
             }
         }
     }
@@ -43,6 +44,6 @@ final class CoreDataStack {
                 print("Ошибка очистки \(name): \(error)")
             }
         }
-        saveContext()
+        try? saveContext()
     }
 }

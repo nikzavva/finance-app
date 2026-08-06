@@ -2,6 +2,14 @@ import Foundation
 import SwiftData
 import CoreData
 
+enum StorageMigrationError: LocalizedError {
+    case verificationFailed
+
+    var errorDescription: String? {
+        "Не удалось проверить целостность перенесённых данных"
+    }
+}
+
 final class StorageManager {
     static let shared = StorageManager()
     
@@ -50,7 +58,6 @@ final class StorageManager {
         self.categoriesStorage = Self.makeCategoriesStorage(type: initialType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
         self.backupStorage = BackupStorage(container: backupContainer)
         
-        Task { await migrateIfNeeded() }
     }
     
     private static func makeTransactionsStorage(type: StorageType, swiftData: ModelContainer, coreData: NSManagedObjectContext) -> TransactionsStorage {
@@ -74,50 +81,71 @@ final class StorageManager {
         }
     }
     
-    func switchStorage(to newType: StorageType) async {
-        guard newType != currentType else { return }
-        
-        let oldTransactions = (try? await transactionsStorage.fetchAll()) ?? []
-        let oldAccounts = (try? await accountsStorage.fetchAll()) ?? []
-        let oldCategories = (try? await categoriesStorage.fetchAll()) ?? []
-        
-        if newType == .coreData {
-            coreDataStack.clearAll()
-        } else {
-            try? swiftDataContainer.mainContext.delete(model: TransactionEntity.self)
-            try? swiftDataContainer.mainContext.delete(model: AccountEntity.self)
-            try? swiftDataContainer.mainContext.delete(model: CategoryEntity.self)
-            try? swiftDataContainer.mainContext.save()
+    func switchStorage(to newType: StorageType) async throws {
+        try await DataMutationCoordinator.shared.withLock {
+            guard newType != currentType else { return }
+            try await migrateStorage(from: currentType, to: newType)
+            currentType = newType
+            UserDefaults.standard.set(newType.rawValue, forKey: "last_storage_type")
         }
-        
-        transactionsStorage = Self.makeTransactionsStorage(type: newType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
-        accountsStorage = Self.makeAccountsStorage(type: newType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
-        categoriesStorage = Self.makeCategoriesStorage(type: newType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
-        
-        for t in oldTransactions { try? await transactionsStorage.create(t) }
-        for a in oldAccounts { try? await accountsStorage.create(a) }
-        try? await categoriesStorage.save(oldCategories)
-        
-        if newType == .coreData {
-            try? swiftDataContainer.mainContext.delete(model: TransactionEntity.self)
-            try? swiftDataContainer.mainContext.delete(model: AccountEntity.self)
-            try? swiftDataContainer.mainContext.delete(model: CategoryEntity.self)
-            try? swiftDataContainer.mainContext.save()
-        } else {
-            coreDataStack.clearAll()
-        }
-        
-        currentType = newType
     }
     
-    private func migrateIfNeeded() async {
+    func migrateIfNeeded() async throws {
         let settings = UserDefaults.standard
         let lastKnownType = StorageType(rawValue: settings.string(forKey: "last_storage_type") ?? "") ?? .swiftData
-        
+
         if lastKnownType != currentType {
-            await switchStorage(to: currentType)
+            try await DataMutationCoordinator.shared.withLock {
+                try await migrateStorage(from: lastKnownType, to: currentType)
+            }
         }
-        
+
         settings.set(currentType.rawValue, forKey: "last_storage_type")
+    }
+
+    private func migrateStorage(from sourceType: StorageType, to destinationType: StorageType) async throws {
+        guard sourceType != destinationType else { return }
+
+        let sourceTransactionsStorage = Self.makeTransactionsStorage(type: sourceType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+        let sourceAccountsStorage = Self.makeAccountsStorage(type: sourceType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+        let sourceCategoriesStorage = Self.makeCategoriesStorage(type: sourceType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+
+        let transactions = try await sourceTransactionsStorage.fetchAll()
+        let accounts = try await sourceAccountsStorage.fetchAll()
+        let categories = try await sourceCategoriesStorage.fetchAll()
+
+        let destinationTransactionsStorage = Self.makeTransactionsStorage(type: destinationType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+        let destinationAccountsStorage = Self.makeAccountsStorage(type: destinationType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+        let destinationCategoriesStorage = Self.makeCategoriesStorage(type: destinationType, swiftData: swiftDataContainer, coreData: coreDataStack.context)
+
+        try await destinationTransactionsStorage.deleteAll()
+        try await destinationAccountsStorage.deleteAll()
+        try await destinationCategoriesStorage.save([])
+
+        for transaction in transactions {
+            try await destinationTransactionsStorage.create(transaction)
+        }
+        for account in accounts {
+            try await destinationAccountsStorage.create(account)
+        }
+        try await destinationCategoriesStorage.save(categories)
+
+        let migratedTransactions = try await destinationTransactionsStorage.fetchAll()
+        let migratedAccounts = try await destinationAccountsStorage.fetchAll()
+        let migratedCategories = try await destinationCategoriesStorage.fetchAll()
+
+        guard Set(migratedTransactions.map(\.id)) == Set(transactions.map(\.id)),
+              Set(migratedAccounts.map(\.id)) == Set(accounts.map(\.id)),
+              Set(migratedCategories.map(\.id)) == Set(categories.map(\.id)) else {
+            throw StorageMigrationError.verificationFailed
+        }
+
+        try await sourceTransactionsStorage.deleteAll()
+        try await sourceAccountsStorage.deleteAll()
+        try await sourceCategoriesStorage.save([])
+
+        transactionsStorage = destinationTransactionsStorage
+        accountsStorage = destinationAccountsStorage
+        categoriesStorage = destinationCategoriesStorage
     }
 }

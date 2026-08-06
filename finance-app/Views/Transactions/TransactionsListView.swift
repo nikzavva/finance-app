@@ -1,183 +1,108 @@
 import SwiftUI
 
 struct TransactionsListView: View {
-    let direction: Direction
-    @Binding var selectedDate: Date
-    
-    @State private var transactions: [Transaction] = []
-    @State private var categories: [Category] = []
-    @State private var totalAmount: Decimal = 0
-    @State private var sortOrder: SortOrder = .date
-    @State private var showDatePicker = false
-    @State private var showSettings = false
-    @State private var showCreateTransaction = false
-    @State private var selectedCategory: Category?
-    @State private var selectedTransaction: Transaction?
-    
-    private let transactionService = TransactionsService()
-    private let categoriesService = CategoriesService()
-    
-    private let formatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.groupingSeparator = " "
-        f.minimumFractionDigits = 0
-        f.maximumFractionDigits = 2
-        return f
-    }()
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                mainContent
-                AddButton { showCreateTransaction = true }
-                OfflineIndicator()
-            }
-            .toolbar {
-                CommonToolbar(
-                    selectedDate: $selectedDate,
-                    showDatePicker: $showDatePicker,
-                    showSettings: $showSettings
-                )
-            }
-            .sheet(isPresented: $showCreateTransaction) {
-                CreateTransactionView(
-                    direction: direction,
-                    initialAccount: nil,
-                    onCreate: { newTransaction in
-                        Task {
-                            await transactionService.createTransaction(newTransaction)
-                        }
-                    }
-                )
-            }
-            .navigationDestination(for: AppRoute.self) { route in
-                switch route {
-                case .analytics:
-                    AnalyticsView()
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                CategorySelectionView(direction: direction) { category in
-                    if selectedCategory?.id == category.id {
-                        selectedCategory = nil
-                    } else {
-                        selectedCategory = category
-                    }
-                }
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(item: $selectedTransaction) { transaction in
-                EditTransactionView(
-                    transaction: transaction,
-                    onSave: { updated in
-                        Task {
-                            await transactionService.updateTransaction(updated)
-                        }
-                    },
-                    onDelete: { id in
-                        Task {
-                            await transactionService.deleteTransaction(id: id)
-                        }
-                    }
-                )
-            }
-            .onAppear {
-                loadCategories()
-                loadTransactions()
-            }
-            .onChange(of: selectedDate) {
-                loadTransactions()
-            }
-            .onChange(of: sortOrder) {
-                loadTransactions()
-            }
-            .onChange(of: selectedCategory) {
-                loadTransactions()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .transactionsDidChange)) { _ in
-                loadTransactions()
-            }
-        }
+    @Binding private var selectedDate: Date
+    @Binding private var selectedCategory: Category?
+    @StateObject private var viewModel: TransactionsListViewModel
+
+    init(
+        direction: Direction,
+        selectedDate: Binding<Date>,
+        selectedCategory: Binding<Category?>
+    ) {
+        _selectedDate = selectedDate
+        _selectedCategory = selectedCategory
+        _viewModel = StateObject(wrappedValue: TransactionsListViewModel(direction: direction))
     }
-    
+
+    var body: some View {
+        ZStack {
+            mainContent
+            AddButton { viewModel.showCreateForm() }
+            OfflineIndicator()
+        }
+        .sheet(isPresented: $viewModel.showCreateTransaction) {
+            CreateTransactionView(
+                direction: viewModel.direction,
+                initialAccount: nil
+            )
+        }
+        .sheet(item: $viewModel.selectedTransaction) { transaction in
+            EditTransactionView(transaction: transaction)
+        }
+        .onAppear {
+            viewModel.onAppear(
+                selectedDate: selectedDate,
+                selectedCategory: selectedCategory
+            )
+        }
+        .onChange(of: selectedDate) {
+            viewModel.loadTransactions(
+                selectedDate: selectedDate,
+                selectedCategory: selectedCategory
+            )
+        }
+        .onChange(of: viewModel.sortOrder) {
+            viewModel.loadTransactions(
+                selectedDate: selectedDate,
+                selectedCategory: selectedCategory
+            )
+        }
+        .onChange(of: selectedCategory) {
+            viewModel.loadTransactions(
+                selectedDate: selectedDate,
+                selectedCategory: selectedCategory
+            )
+        }
+        .onDisappear {
+            viewModel.cancelLoading()
+        }
+        .networkLoadingOverlay()
+    }
+
     private var mainContent: some View {
         VStack {
             VStack(alignment: .leading, spacing: UIConstants.Spacing.small) {
-                Text(direction == .income ? "доходы, всего" : "расходы, всего")
+                Text(viewModel.totalTitle)
                     .font(.callout)
                     .foregroundColor(.secondary)
-                Text(formatAmount(totalAmount) + " ₽")
+                Text(viewModel.formattedTotalAmount)
                     .font(.system(size: UIConstants.Sizes.totalAmountFontSize, weight: .bold, design: .rounded))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal)
             .padding(.top)
             .padding(.bottom)
-            Picker("Сортировка", selection: $sortOrder) {
+
+            Picker("Сортировка", selection: $viewModel.sortOrder) {
                 Text("По дате").tag(SortOrder.date)
                 Text("По сумме").tag(SortOrder.amount)
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
+
             ScrollView {
                 LazyVStack(spacing: .zero) {
-                    ForEach(transactions, id: \.id) { transaction in
+                    ForEach(viewModel.transactions, id: \.id) { transaction in
                         TransactionRow(
-                            category: categories.first(where: { $0.id == transaction.categoryId }),
+                            category: viewModel.category(for: transaction),
                             transaction: transaction,
-                            formatter: formatter
+                            formatter: viewModel.formatter
                         )
                         .onTapGesture {
-                            selectedTransaction = transaction
+                            viewModel.selectTransaction(transaction)
                         }
                     }
                 }
             }
             .refreshable {
                 selectedCategory = nil
-                loadTransactions()
+                viewModel.loadTransactions(
+                    selectedDate: selectedDate,
+                    selectedCategory: nil
+                )
             }
         }
         .background(Color(.systemBackground))
-    }
-    
-    private func loadCategories() {
-        Task {
-            let all = await categoriesService.fetchAllCategories()
-            await MainActor.run {
-                categories = all
-            }
-        }
-    }
-    
-    private func loadTransactions() {
-        let startOfDay = Calendar.current.startOfDay(for: selectedDate)
-        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
-        
-        Task {
-            let all = await transactionService.fetchTransactions(from: startOfDay, to: endOfDay)
-            let filtered = all.filter { transaction in
-                transaction.direction == direction &&
-                (selectedCategory == nil || transaction.categoryId == selectedCategory?.id)
-            }
-            let sorted: [Transaction]
-            switch sortOrder {
-            case .date:
-                sorted = filtered.sorted(by: { $0.transactionDate > $1.transactionDate })
-            case .amount:
-                sorted = filtered.sorted(by: { $0.amount > $1.amount })
-            }
-            await MainActor.run {
-                transactions = sorted
-                totalAmount = filtered.reduce(0) { $0 + $1.amount }
-            }
-        }
-    }
-    
-    private func formatAmount(_ value: Decimal) -> String {
-        let number = value as NSDecimalNumber
-        return formatter.string(from: number) ?? "0"
     }
 }

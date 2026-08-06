@@ -24,6 +24,6 @@ final class CategoriesCoreDataStorage: CategoriesStorage {
             let mo = CategoryMO(context: context)
             mo.fill(from: category)
         }
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
 }

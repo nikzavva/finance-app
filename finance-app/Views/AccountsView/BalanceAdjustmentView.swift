@@ -1,25 +1,35 @@
 import SwiftUI
 
 struct BalanceAdjustmentView: View {
-    let account: BankAccount
     let appCurrency: String
-    let formatter: NumberFormatter
     let onSave: (Decimal, Date) -> Void
     let onDelete: (Int) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var amount: String = ""
-    @State private var previousAmount: String = ""
-    @State private var date: Date = Date()
-    @State private var showDeleteConfirmation = false
+    @StateObject private var viewModel: BalanceAdjustmentViewModel
     @FocusState private var isAmountFocused: Bool
+
+    init(
+        account: BankAccount,
+        appCurrency: String,
+        formatter: NumberFormatter,
+        onSave: @escaping (Decimal, Date) -> Void,
+        onDelete: @escaping (Int) -> Void
+    ) {
+        self.appCurrency = appCurrency
+        self.onSave = onSave
+        self.onDelete = onDelete
+        _viewModel = StateObject(
+            wrappedValue: BalanceAdjustmentViewModel(account: account, formatter: formatter)
+        )
+    }
     
     var body: some View {
         NavigationStack {
             VStack(spacing: .zero) {
                 AmountTextField(
-                    amount: $amount,
-                    previousAmount: $previousAmount,
+                    amount: $viewModel.amount,
+                    previousAmount: $viewModel.previousAmount,
                     isFocused: $isAmountFocused,
                     maxAmount: Constants.maxAmountBankAccount
                 )
@@ -29,7 +39,7 @@ struct BalanceAdjustmentView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                    Text(viewModel.date.formatted(date: .abbreviated, time: .shortened))
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
@@ -62,34 +72,32 @@ struct BalanceAdjustmentView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        showDeleteConfirmation = true
+                        viewModel.requestDeletion()
                     } label: {
                         Image(systemName: "trash")
                             .font(.body)
                             .foregroundColor(.red)
                     }
+                    .disabled(viewModel.isSubmitting)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        guard let decimalAmount = AmountTextField.parseAmount(amount) else { return }
-                        onSave(decimalAmount, date)
+                        guard let submission = viewModel.submitBalance() else { return }
+                        onSave(submission.amount, submission.date)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body)
                             .foregroundColor(.accentColor)
                     }
+                    .disabled(viewModel.isSubmitting)
                 }
             }
-            .onAppear {
-                let initial = AmountTextField.formatAmount(account.balance, formatter: formatter)
-                amount = initial
-                previousAmount = initial
-            }
-            .alert("Удалить счёт?", isPresented: $showDeleteConfirmation) {
+            .alert("Удалить счёт?", isPresented: $viewModel.showDeleteConfirmation) {
                 Button("Удалить", role: .destructive) {
-                    onDelete(account.id)
+                    guard let accountID = viewModel.confirmDeletion() else { return }
+                    onDelete(accountID)
                     dismiss()
                 }
                 Button("Отмена", role: .cancel) {}

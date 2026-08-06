@@ -1,6 +1,23 @@
 import Foundation
 import SwiftData
 
+enum BackupActionResolver {
+    static func resolve(existing: BackupActionType?, adding newAction: BackupActionType) -> BackupActionType? {
+        guard let existing else { return newAction }
+
+        switch (existing, newAction) {
+        case (.create, .update):
+            return .create
+        case (.create, .delete):
+            return nil
+        case (.delete, .update):
+            return .delete
+        default:
+            return newAction
+        }
+    }
+}
+
 final class BackupStorage {
     private let container: ModelContainer
     
@@ -17,12 +34,19 @@ final class BackupStorage {
     func addTransactionAction(_ transaction: Transaction, action: BackupActionType) throws {
         let context = ModelContext(container)
         let all = try context.fetch(FetchDescriptor<BackupTransactionAction>())
-        
-        if let existing = all.first(where: { $0.transactionId == transaction.id }) {
+        let existing = all.first(where: { $0.transactionId == transaction.id })
+        let resolvedAction = BackupActionResolver.resolve(existing: existing?.actionType, adding: action)
+
+        if let existing {
             context.delete(existing)
         }
-        
-        let entity = BackupTransactionAction(transaction: transaction, action: action)
+
+        guard let resolvedAction else {
+            try context.save()
+            return
+        }
+
+        let entity = BackupTransactionAction(transaction: transaction, action: resolvedAction)
         context.insert(entity)
         try context.save()
     }
@@ -45,12 +69,19 @@ final class BackupStorage {
     func addAccountAction(_ account: BankAccount, action: BackupActionType) throws {
         let context = ModelContext(container)
         let all = try context.fetch(FetchDescriptor<BackupAccountAction>())
-        
-        if let existing = all.first(where: { $0.accountId == account.id }) {
+        let existing = all.first(where: { $0.accountId == account.id })
+        let resolvedAction = BackupActionResolver.resolve(existing: existing?.actionType, adding: action)
+
+        if let existing {
             context.delete(existing)
         }
-        
-        let entity = BackupAccountAction(account: account, action: action)
+
+        guard let resolvedAction else {
+            try context.save()
+            return
+        }
+
+        let entity = BackupAccountAction(account: account, action: resolvedAction)
         context.insert(entity)
         try context.save()
     }

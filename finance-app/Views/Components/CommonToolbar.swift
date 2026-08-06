@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CommonToolbar: ToolbarContent {
+    let direction: Direction
     @Binding var selectedDate: Date
     @Binding var showDatePicker: Bool
     @Binding var showSettings: Bool
@@ -23,7 +24,7 @@ struct CommonToolbar: ToolbarContent {
         }
         
         ToolbarItem(placement: .navigationBarTrailing) {
-            NavigationLink(value: AppRoute.analytics) {
+            NavigationLink(value: AppRoute.analytics(direction)) {
                 Image(systemName: "chart.pie")
                     .font(.title3)
                     .foregroundColor(.primary)
@@ -35,6 +36,20 @@ struct CommonToolbar: ToolbarContent {
             ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
         }
         
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button(action: { showSettings = true }) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.title3)
+                    .foregroundColor(.primary)
+            }
+        }
+    }
+}
+
+struct AccountsToolbar: ToolbarContent {
+    @Binding var showSettings: Bool
+
+    var body: some ToolbarContent {
         ToolbarItem(placement: .navigationBarTrailing) {
             Button(action: { showSettings = true }) {
                 Image(systemName: "slider.horizontal.3")

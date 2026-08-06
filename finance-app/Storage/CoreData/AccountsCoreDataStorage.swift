@@ -25,7 +25,7 @@ final class AccountsCoreDataStorage: AccountsStorage {
     func create(_ account: BankAccount) async throws {
         let mo = AccountMO(context: context)
         mo.fill(from: account)
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
     
     func update(_ account: BankAccount) async throws {
@@ -37,7 +37,7 @@ final class AccountsCoreDataStorage: AccountsStorage {
             let mo = AccountMO(context: context)
             mo.fill(from: account)
         }
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
     
     func delete(byId id: Int) async throws {
@@ -45,13 +45,13 @@ final class AccountsCoreDataStorage: AccountsStorage {
         request.predicate = NSPredicate(format: "id == %lld", Int64(id))
         if let existing = try context.fetch(request).first {
             context.delete(existing)
-            CoreDataStack.shared.saveContext()
+            try CoreDataStack.shared.saveContext()
         }
     }
     
     func deleteAll() async throws {
         let results = try context.fetch(fetchRequest)
         results.forEach { context.delete($0) }
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
 }

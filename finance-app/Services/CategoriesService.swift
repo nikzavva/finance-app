@@ -6,16 +6,18 @@ final class CategoriesService {
     
     func fetchAllCategories() async -> [Category] {
         guard NetworkMonitor.shared.isConnected else {
-            return (try? await storage.fetchAll()) ?? []
+            return sorted(await fetchLocalCategories())
         }
         
         do {
             let dtos: [CategoryDTO] = try await network.get(endpoint: "/categories")
-            let categories = dtos.map { $0.toDomain() }
-            try? await storage.save(categories)
+            let categories = sorted(dtos.map { $0.toDomain() })
+            try? await DataMutationCoordinator.shared.withLock {
+                try await storage.save(categories)
+            }
             return categories
         } catch {
-            return (try? await storage.fetchAll()) ?? []
+            return sorted(await fetchLocalCategories())
         }
     }
     
@@ -23,22 +25,37 @@ final class CategoriesService {
         let isIncome = direction == .income
         
         guard NetworkMonitor.shared.isConnected else {
-            let local = (try? await storage.fetchAll()) ?? []
-            return local.filter { $0.isIncome == isIncome }
+            let local = await fetchLocalCategories()
+            return sorted(local.filter { $0.isIncome == isIncome })
         }
         
         do {
             let dtos: [CategoryDTO] = try await network.get(endpoint: "/categories/type/\(isIncome)")
-            let categories = dtos.map { $0.toDomain() }
+            let categories = sorted(dtos.map { $0.toDomain() })
             
-            let all = (try? await storage.fetchAll()) ?? []
-            let other = all.filter { $0.isIncome != isIncome }
-            try? await storage.save(other + categories)
+            try? await DataMutationCoordinator.shared.withLock {
+                let all = try await storage.fetchAll()
+                let other = all.filter { $0.isIncome != isIncome }
+                try await storage.save(sorted(other + categories))
+            }
             
             return categories
         } catch {
-            let local = (try? await storage.fetchAll()) ?? []
-            return local.filter { $0.isIncome == isIncome }
+            let local = await fetchLocalCategories()
+            return sorted(local.filter { $0.isIncome == isIncome })
+        }
+    }
+
+    private func fetchLocalCategories() async -> [Category] {
+        (try? await DataMutationCoordinator.shared.withLock {
+            try await storage.fetchAll()
+        }) ?? []
+    }
+
+    private func sorted(_ categories: [Category]) -> [Category] {
+        categories.sorted {
+            let comparison = $0.name.localizedCaseInsensitiveCompare($1.name)
+            return comparison == .orderedSame ? $0.id < $1.id : comparison == .orderedAscending
         }
     }
 }

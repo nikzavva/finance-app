@@ -1,23 +1,22 @@
 import SwiftUI
 
 struct CategorySelectionView: View {
-    let direction: Direction
     let onSelect: (Category) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var categories: [Category] = []
-    @State private var searchText = ""
+    @StateObject private var viewModel: CategorySelectionViewModel
     @FocusState private var isSearchFocused: Bool
-    
-    private let categoriesService = CategoriesService()
-    
-    private var filteredCategories: [Category] {
-        guard !searchText.isEmpty else { return categories }
-        let words = searchText.lowercased().split(separator: " ").map(String.init)
-        return categories.filter { category in
-            let name = category.name.lowercased()
-            return words.allSatisfy { name.contains($0) }
-        }
+
+    init(
+        direction: Direction,
+        onSelect: @escaping (Category) -> Void
+    ) {
+        self.onSelect = onSelect
+        _viewModel = StateObject(
+            wrappedValue: CategorySelectionViewModel(
+                direction: direction
+            )
+        )
     }
     
     var body: some View {
@@ -27,7 +26,7 @@ struct CategorySelectionView: View {
                     LazyVStack(spacing: .zero) {
                         Divider()
                             .padding(.horizontal)
-                        ForEach(filteredCategories, id: \.id) { category in
+                        ForEach(viewModel.filteredCategories, id: \.id) { category in
                             Button {
                                 onSelect(category)
                                 dismiss()
@@ -56,7 +55,7 @@ struct CategorySelectionView: View {
                 }
             }
             .searchable(
-                text: $searchText,
+                text: $viewModel.searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
                 prompt: ""
             )
@@ -72,18 +71,10 @@ struct CategorySelectionView: View {
                     }
                 }
             }
-            .onAppear {
-                loadCategories()
+            .task {
+                await viewModel.load()
             }
         }
-    }
-    
-    private func loadCategories() {
-        Task {
-            let all = await categoriesService.fetchCategories(direction: direction)
-            await MainActor.run {
-                categories = all
-            }
-        }
+        .networkLoadingOverlay()
     }
 }

@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct OfflineIndicator: View {
-    @ObservedObject var monitor = NetworkMonitor.shared
+    @ObservedObject private var viewModel = NetworkPresentationViewModel.shared
     
     var body: some View {
-        if monitor.isOfflineMode {
+        if viewModel.isOffline {
             VStack {
                 Spacer()
                 HStack {
@@ -22,7 +22,7 @@ struct OfflineIndicator: View {
                 }
             }
             .transition(.scale.combined(with: .opacity))
-            .animation(.easeInOut, value: monitor.isOfflineMode)
+            .animation(.easeInOut, value: viewModel.isOffline)
         }
     }
 }

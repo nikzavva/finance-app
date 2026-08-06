@@ -30,14 +30,14 @@ final class TransactionsCoreDataStorage: TransactionsStorage {
         request.predicate = NSPredicate(format: "id == %lld", Int64(id))
         if let existing = try context.fetch(request).first {
             context.delete(existing)
-            CoreDataStack.shared.saveContext()
+            try CoreDataStack.shared.saveContext()
         }
     }
     
     func create(_ transaction: Transaction) async throws {
         let mo = TransactionMO(context: context)
         mo.fill(from: transaction)
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
     
     func update(_ transaction: Transaction) async throws {
@@ -49,12 +49,12 @@ final class TransactionsCoreDataStorage: TransactionsStorage {
             let mo = TransactionMO(context: context)
             mo.fill(from: transaction)
         }
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
         
     func deleteAll() async throws {
         let results = try context.fetch(fetchRequest)
         results.forEach { context.delete($0) }
-        CoreDataStack.shared.saveContext()
+        try CoreDataStack.shared.saveContext()
     }
 }
