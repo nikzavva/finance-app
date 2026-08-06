@@ -8,6 +8,7 @@ final class CreateAccountViewModel: ObservableObject {
     @Published var amount = "0"
     @Published var previousAmount = "0"
     @Published var date = Date()
+    @Published var currency = AppSettings.currentCurrency
     @Published var showValidationError = false
     @Published private(set) var isSubmitting = false
 
@@ -28,7 +29,7 @@ final class CreateAccountViewModel: ObservableObject {
             name: name.trimmingCharacters(in: .whitespaces),
             emoji: emoji,
             balance: decimalAmount,
-            currency: AppSettings.currentCurrency.rawValue,
+            currency: currency.rawValue,
             createdAt: dateString,
             updatedAt: dateString
         )

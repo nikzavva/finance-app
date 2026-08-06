@@ -31,7 +31,7 @@ struct EditTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(viewModel.selectedCategory?.name ?? "Выбрать")
+                        Text(viewModel.selectedCategory?.name ?? "Выбрать".appLocalized)
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
@@ -71,7 +71,7 @@ struct EditTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(viewModel.selectedAccount?.name ?? "Выбрать")
+                        Text(viewModel.selectedAccount?.name ?? "Выбрать".appLocalized)
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
@@ -146,7 +146,7 @@ struct EditTransactionView: View {
                 .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $viewModel.showAccountSelection) {
-                AccountSelectionView { account in
+                AccountSelectionView(currency: viewModel.accountCurrency) { account in
                     viewModel.selectAccount(account)
                 }
                 .presentationDetents([.medium, .large])

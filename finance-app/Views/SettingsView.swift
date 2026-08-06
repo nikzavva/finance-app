@@ -31,8 +31,9 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section(settings.language.text("Кошелёк", "Wallet")) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 28) {
+                    SettingsSection(title: settings.language.text("Кошелёк", "Wallet")) {
                     Button { destination = .currency } label: {
                         SettingsRow(
                             title: settings.language.text("Валюта", "Currency"),
@@ -40,6 +41,8 @@ struct SettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+
+                    Divider()
 
                     Button { destination = .categories } label: {
                         SettingsRow(
@@ -49,9 +52,9 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(categoryDirection == nil)
-                }
+                    }
 
-                Section(settings.language.text("Интерфейс", "Interface")) {
+                    SettingsSection(title: settings.language.text("Интерфейс", "Interface")) {
                     Button { destination = .theme } label: {
                         SettingsRow(
                             title: settings.language.text("Тема оформления", "Appearance"),
@@ -60,6 +63,8 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Divider()
+
                     Button { destination = .language } label: {
                         SettingsRow(
                             title: settings.language.text("Язык", "Language"),
@@ -67,9 +72,9 @@ struct SettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                }
+                    }
 
-                Section(settings.language.text("Безопасность", "Security")) {
+                    SettingsSection(title: settings.language.text("Безопасность", "Security")) {
                     Button { destination = .pin } label: {
                         SettingsRow(
                             title: settings.language.text("PIN-код", "PIN code"),
@@ -80,6 +85,8 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Divider()
+
                     Button { destination = .biometrics } label: {
                         SettingsRow(
                             title: security.biometryName,
@@ -89,8 +96,11 @@ struct SettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    }
                 }
             }
+            .padding(.horizontal)
+            .padding(.vertical)
             .navigationTitle(settings.language.text("Настройки", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -103,12 +113,14 @@ struct SettingsView: View {
                 }
             }
         }
+        .id(settings.theme)
+        .settingsTheme(settings.theme)
         .presentationDetents([.medium, .large])
         .sheet(item: $destination) { destination in
             switch destination {
             case .currency:
                 SettingsChoiceView(
-                    title: settings.language.text("Валюта", "Currency"),
+                    title: { $0.text("Валюта", "Currency") },
                     choices: AppCurrency.allCases,
                     selected: $settings.currency,
                     choiceTitle: { $0.title(for: settings.language) }
@@ -123,14 +135,14 @@ struct SettingsView: View {
                 }
             case .theme:
                 SettingsChoiceView(
-                    title: settings.language.text("Тема оформления", "Appearance"),
+                    title: { $0.text("Тема оформления", "Appearance") },
                     choices: AppTheme.allCases,
                     selected: $settings.theme,
                     choiceTitle: { $0.title(for: settings.language) }
                 )
             case .language:
                 SettingsChoiceView(
-                    title: settings.language.text("Язык", "Language"),
+                    title: { $0.text("Язык", "Language") },
                     choices: AppLanguage.allCases,
                     selected: $settings.language,
                     choiceTitle: \.title
@@ -153,6 +165,23 @@ struct SettingsView: View {
     }
 }
 
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: .zero) {
+                content
+            }
+        }
+    }
+}
+
 private struct SettingsRow: View {
     let title: String
     let value: String
@@ -169,38 +198,50 @@ private struct SettingsRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
+        .padding(.vertical)
         .contentShape(Rectangle())
     }
 }
 
 private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
-    let title: String
+    let title: (AppLanguage) -> String
     let choices: [Choice]
     @Binding var selected: Choice
     let choiceTitle: (Choice) -> String
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
 
     var body: some View {
         NavigationStack {
-            List(choices) { choice in
-                Button {
-                    selected = choice
-                } label: {
-                    HStack {
-                        Text(choiceTitle(choice))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if selected == choice {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.tint)
+            ScrollView {
+                LazyVStack(spacing: .zero) {
+                    ForEach(Array(choices.enumerated()), id: \.element.id) { index, choice in
+                        Button {
+                            selected = choice
+                        } label: {
+                            HStack {
+                                Text(choiceTitle(choice))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if selected == choice {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                            .padding(.vertical)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < choices.count - 1 {
+                            Divider()
                         }
                     }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
             }
-            .navigationTitle(title)
+            .padding(.horizontal)
+            .navigationTitle(title(settings.language))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -212,6 +253,8 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
                 }
             }
         }
+        .id(settings.theme)
+        .settingsTheme(settings.theme)
         .presentationDetents([.medium])
     }
 }
@@ -253,7 +296,7 @@ private struct SettingsPINView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(pin.count != 4)
+                .tint(.blue)
 
                 Spacer()
             }
@@ -270,9 +313,11 @@ private struct SettingsPINView: View {
                 }
             }
             .alert(settings.language.text("PIN-код должен содержать 4 цифры", "PIN code must contain 4 digits"), isPresented: $showValidationError) {
-                Button("OK", role: .cancel) {}
+                Button("ОК", role: .cancel) {}
             }
         }
+        .id(settings.theme)
+        .settingsTheme(settings.theme)
         .presentationDetents([.medium])
     }
 }
@@ -284,20 +329,37 @@ private struct SettingsBiometricsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
+            ScrollView {
+                VStack(alignment: .leading) {
                     Toggle(
                         security.biometryName,
-                        isOn: $security.useBiometrics
+                        isOn: Binding(
+                            get: { security.useBiometrics },
+                            set: { isEnabled in
+                                if isEnabled {
+                                    Task { await security.enableBiometrics() }
+                                } else {
+                                    security.disableBiometrics()
+                                }
+                            }
+                        )
                     )
-                    .disabled(!security.isBiometricsAvailable || !security.hasPIN)
-                } footer: {
+                    .disabled(
+                        !security.isBiometricsAvailable ||
+                        !security.hasPIN ||
+                        security.isAuthenticatingBiometrics
+                    )
+
                     if !security.hasPIN {
                         Text(settings.language.text("Сначала задайте PIN-код", "Set a PIN code first"))
+                            .padding(.top, 4)
                     } else if !security.isBiometricsAvailable {
                         Text(settings.language.text("Биометрия недоступна на этом устройстве", "Biometrics are unavailable on this device"))
+                            .padding(.top, 4)
                     }
                 }
+                .foregroundStyle(.secondary)
+                .padding()
             }
             .navigationTitle(security.biometryName)
             .navigationBarTitleDisplayMode(.inline)
@@ -311,6 +373,20 @@ private struct SettingsBiometricsView: View {
                 }
             }
         }
+        .id(settings.theme)
+        .settingsTheme(settings.theme)
         .presentationDetents([.medium])
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func settingsTheme(_ theme: AppTheme) -> some View {
+        if let colorScheme = theme.colorScheme {
+            environment(\.colorScheme, colorScheme)
+                .preferredColorScheme(colorScheme)
+        } else {
+            preferredColorScheme(nil)
+        }
     }
 }

@@ -4,8 +4,15 @@ struct AccountSelectionView: View {
     let onSelect: (BankAccount) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = AccountSelectionViewModel()
+    @StateObject private var viewModel: AccountSelectionViewModel
     @FocusState private var isSearchFocused: Bool
+
+    init(currency: AppCurrency, onSelect: @escaping (BankAccount) -> Void) {
+        self.onSelect = onSelect
+        _viewModel = StateObject(
+            wrappedValue: AccountSelectionViewModel(currency: currency)
+        )
+    }
     
     var body: some View {
         NavigationStack {

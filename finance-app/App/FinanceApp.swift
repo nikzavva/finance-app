@@ -38,6 +38,8 @@ private struct AppContentView: View {
                 }
                 .background(Color(uiColor: .systemBackground))
                 .ignoresSafeArea()
+            } else if !security.hasPIN {
+                InitialSecuritySetupView()
             } else {
                 if security.isLocked {
                     AppLockView()

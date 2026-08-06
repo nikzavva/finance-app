@@ -9,7 +9,7 @@ final class BankAccountsViewModel: ObservableObject {
     @Published var selectedAccount: BankAccount?
     @Published var isBalanceHidden = false
     @Published var showDeleteError = false
-    @Published private(set) var deleteErrorMessage = "Сначала удалите все операции по этому счёту"
+    @Published private(set) var deleteErrorMessage = "Сначала удалите все операции по этому счёту".appLocalized
 
     let formatter: NumberFormatter
 
@@ -21,6 +21,8 @@ final class BankAccountsViewModel: ObservableObject {
     private var updatingAccountIDs: Set<Int> = []
     private var deletingAccountIDs: Set<Int> = []
     private var dataChangeCancellable: AnyCancellable?
+    private var allAccounts: [BankAccount] = []
+    private var selectedCurrency = AppSettings.currentCurrency
 
     init(
         accountsService: (any BankAccountsServicing)? = nil,
@@ -43,7 +45,8 @@ final class BankAccountsViewModel: ObservableObject {
         AmountInputFormatter.format(totalBalance, with: formatter)
     }
 
-    func onAppear() {
+    func onAppear(currency: AppCurrency? = nil) {
+        setCurrency(currency ?? AppSettings.currentCurrency)
         observeDataChanges()
         Task {
             await loadAccounts()
@@ -52,6 +55,13 @@ final class BankAccountsViewModel: ObservableObject {
 
     func onDisappear() {
         dataChangeCancellable = nil
+    }
+
+    func setCurrency(_ currency: AppCurrency) {
+        guard selectedCurrency != currency else { return }
+        selectedCurrency = currency
+        selectedAccount = nil
+        applyCurrencyFilter()
     }
 
     func loadAccounts() async {
@@ -99,7 +109,7 @@ final class BankAccountsViewModel: ObservableObject {
 
         let transactions = await transactionsService.fetchTransactionsForAccount(id: id)
         guard transactions.isEmpty else {
-            presentDeleteError("Сначала удалите все операции по этому счёту")
+            presentDeleteError("Сначала удалите все операции по этому счёту".appLocalized)
             selectedAccount = nil
             return
         }
@@ -107,17 +117,22 @@ final class BankAccountsViewModel: ObservableObject {
         let result = await accountsService.deleteAccount(id: id)
         switch result {
         case .deleted:
-            apply(accounts.filter { $0.id != id })
+            apply(allAccounts.filter { $0.id != id })
         case .hasTransactions:
-            presentDeleteError("Сначала удалите все операции по этому счёту")
+            presentDeleteError("Сначала удалите все операции по этому счёту".appLocalized)
         case .failed:
-            presentDeleteError("Произошла ошибка. Попробуйте ещё раз")
+            presentDeleteError("Произошла ошибка. Попробуйте ещё раз".appLocalized)
         }
         selectedAccount = nil
     }
 
     private func apply(_ accounts: [BankAccount]) {
-        self.accounts = accounts
+        allAccounts = accounts
+        applyCurrencyFilter()
+    }
+
+    private func applyCurrencyFilter() {
+        accounts = allAccounts.filter { $0.currency == selectedCurrency.rawValue }
         totalBalance = accounts.reduce(.zero) { $0 + $1.balance }
     }
 

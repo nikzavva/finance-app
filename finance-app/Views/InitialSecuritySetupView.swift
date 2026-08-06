@@ -1,17 +1,22 @@
 import SwiftUI
 
-struct AppLockView: View {
+struct InitialSecuritySetupView: View {
     @EnvironmentObject private var security: AppSecurityManager
     @State private var pin = ""
-    @State private var isInvalidPIN = false
+    @State private var showValidationError = false
 
     var body: some View {
         VStack {
+            Spacer()
+
             Image(systemName: "lock.fill")
                 .font(.largeTitle)
                 .foregroundStyle(.tint)
-            Text("Введите PIN-код")
+
+            Text("Защитите приложение PIN-кодом")
                 .font(.title3.weight(.semibold))
+                .padding(.top)
+
             SecureField("PIN-код", text: $pin)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
@@ -21,28 +26,24 @@ struct AppLockView: View {
                 .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
                 .onChange(of: pin) { _, value in
                     pin = String(value.filter(\.isNumber).prefix(4))
-                    if pin.count == 4 {
-                        isInvalidPIN = !security.unlock(with: pin)
-                        if isInvalidPIN { pin = "" }
-                    }
                 }
 
-            if security.useBiometrics && security.isBiometricsAvailable {
-                Button(security.biometryName) {
-                    security.unlockWithBiometricsIfPossible()
+            Button("Продолжить") {
+                if security.setPIN(pin) {
+                    security.disableBiometrics()
+                } else {
+                    showValidationError = true
                 }
-                .buttonStyle(.bordered)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .padding(.top)
 
-            DeleteAllDataButton()
-                .padding(.top)
+            Spacer()
         }
         .padding()
-        .alert("Неверный PIN-код", isPresented: $isInvalidPIN) {
+        .alert("PIN-код должен содержать 4 цифры", isPresented: $showValidationError) {
             Button("ОК", role: .cancel) {}
-        }
-        .onAppear {
-            security.unlockWithBiometricsIfPossible()
         }
     }
 }

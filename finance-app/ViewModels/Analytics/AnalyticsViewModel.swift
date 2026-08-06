@@ -43,6 +43,7 @@ final class AnalyticsViewModel {
     private let categoriesService: CategoriesServicing
     private let accountsService: BankAccountsServicing
     private let calendar: Calendar
+    private var currency: AppCurrency
     private var filters: Filters
     private var transactions: [Transaction] = []
     private var categories: [Category] = []
@@ -54,6 +55,7 @@ final class AnalyticsViewModel {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = AppSettings.currentLanguage.locale
         formatter.dateStyle = .short
         formatter.timeStyle = .none
         return formatter
@@ -73,17 +75,23 @@ final class AnalyticsViewModel {
     private(set) var isLoading = false
     var onChange: ((Change) -> Void)?
 
+    var currencySymbol: String {
+        currency.symbol
+    }
+
     init(
         initialDirection: Direction,
         transactionsService: TransactionsServicing,
         categoriesService: CategoriesServicing,
         accountsService: BankAccountsServicing,
+        currency: AppCurrency? = nil,
         calendar: Calendar = .current,
         now: Date = Date()
     ) {
         self.transactionsService = transactionsService
         self.categoriesService = categoriesService
         self.accountsService = accountsService
+        self.currency = currency ?? AppSettings.currentCurrency
         self.calendar = calendar
         let today = calendar.startOfDay(for: now)
         let monthAgo = calendar.date(byAdding: .month, value: -1, to: today) ?? today
@@ -127,6 +135,22 @@ final class AnalyticsViewModel {
         hasStarted = false
         isLoading = false
         onChange = nil
+    }
+
+    func refreshLocalization() {
+        dateFormatter.locale = AppSettings.currentLanguage.locale
+        rebuildPresentation()
+        onChange?(.filters)
+        onChange?(.content)
+    }
+
+    func updateCurrency(_ currency: AppCurrency) {
+        guard self.currency != currency else { return }
+        self.currency = currency
+        filters.accountID = nil
+        loadFilterOptions()
+        loadTransactions()
+        onChange?(.filters)
     }
 
     func filterRow(for filter: AnalyticsFilter) -> AnalyticsFilterRowViewData {
@@ -206,7 +230,7 @@ final class AnalyticsViewModel {
             let (loadedCategories, loadedAccounts) = await (fetchedCategories, fetchedAccounts)
             guard !Task.isCancelled, let self else { return }
             categories = loadedCategories
-            accounts = loadedAccounts
+            accounts = loadedAccounts.filter { $0.currency == self.currency.rawValue }
             rebuildPresentation()
             onChange?(.filters)
             onChange?(.content)
@@ -222,12 +246,22 @@ final class AnalyticsViewModel {
         let categoryIDs = filters.categoryIDs
         let accountID = filters.accountID
         let sortOrder = filters.sortOrder
+        let currency = self.currency
         let transactionsService = self.transactionsService
+        let accountsService = self.accountsService
 
         transactionsTask = Task { [weak self] in
-            let loadedTransactions = await transactionsService.fetchTransactions(from: startDate, to: endDate)
+            async let transactionsTask = transactionsService.fetchTransactions(from: startDate, to: endDate)
+            async let accountsTask = accountsService.fetchAccounts()
+            let (loadedTransactions, loadedAccounts) = await (transactionsTask, accountsTask)
             guard !Task.isCancelled, let self else { return }
+            let accountIDs = Set(
+                loadedAccounts
+                    .filter { $0.currency == currency.rawValue }
+                    .map(\.id)
+            )
             transactions = loadedTransactions
+                .filter { accountIDs.contains($0.accountId) }
                 .filter { direction == nil || $0.direction == direction }
                 .filter { categoryIDs?.contains($0.categoryId) ?? true }
                 .filter { accountID == nil || $0.accountId == accountID }
@@ -306,15 +340,15 @@ final class AnalyticsViewModel {
             let amount = amountFormatter.string(from: transaction.amount as NSDecimalNumber) ?? "0"
             return AnalyticsTransactionRowViewData(
                 emoji: String(category?.emoji ?? "💳"),
-                title: transaction.comment ?? "Без описания",
-                amount: "\(amount) ₽"
+                title: transaction.comment ?? "Без описания".appLocalized,
+                amount: "\(amount) \(currency.symbol)"
             )
         }
 
         let groupedTransactions = Dictionary(grouping: transactions, by: \.categoryId)
         chartEntities = groupedTransactions.map { categoryID, categoryTransactions in
             let value = categoryTransactions.reduce(Decimal.zero) { $0 + $1.amount }
-            let label = categoriesByID[categoryID]?.name ?? "Без статьи"
+            let label = categoriesByID[categoryID]?.name ?? "Без статьи".appLocalized
             return Entity(value: value, label: label)
         }
         .sorted { first, second in
@@ -328,15 +362,15 @@ final class AnalyticsViewModel {
     private func filterTitle(for filter: AnalyticsFilter) -> String {
         switch filter {
         case .direction:
-            return "Тип"
+            return "Тип".appLocalized
         case .period:
-            return "Период"
+            return "Период".appLocalized
         case .sortOrder:
-            return "Сортировка"
+            return "Сортировка".appLocalized
         case .categories:
-            return "Статьи"
+            return "Статьи".appLocalized
         case .account:
-            return "Счёт"
+            return "Счёт".appLocalized
         }
     }
 
@@ -345,30 +379,30 @@ final class AnalyticsViewModel {
         case .direction:
             switch filters.direction {
             case nil:
-                return "Все"
+                return "Все".appLocalized
             case .outcome:
-                return "Расходы"
+                return "Расходы".appLocalized
             case .income:
-                return "Доходы"
+                return "Доходы".appLocalized
             }
         case .period:
             return "\(dateFormatter.string(from: filters.startDate)) – \(dateFormatter.string(from: filters.endDate))"
         case .sortOrder:
             switch filters.sortOrder {
             case .date:
-                return "По дате"
+                return "По дате".appLocalized
             case .amount:
-                return "По сумме"
+                return "По сумме".appLocalized
             }
         case .categories:
-            guard let categoryIDs = filters.categoryIDs else { return "Все статьи" }
+            guard let categoryIDs = filters.categoryIDs else { return "Все статьи".appLocalized }
             let names = categories
                 .filter { categoryIDs.contains($0.id) }
                 .map(\.name)
-            return names.isEmpty ? "Нет статей" : names.joined(separator: ", ")
+            return names.isEmpty ? "Нет статей".appLocalized : names.joined(separator: ", ")
         case .account:
-            guard let accountID = filters.accountID else { return "Все счета" }
-            return accounts.first(where: { $0.id == accountID })?.name ?? "Все счета"
+            guard let accountID = filters.accountID else { return "Все счета".appLocalized }
+            return accounts.first(where: { $0.id == accountID })?.name ?? "Все счета".appLocalized
         }
     }
 }

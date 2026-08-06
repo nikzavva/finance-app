@@ -7,6 +7,7 @@ import Security
 final class AppSecurityManager: ObservableObject {
     @Published private(set) var isLocked: Bool
     @Published private(set) var hasPIN: Bool
+    @Published private(set) var isAuthenticatingBiometrics = false
     @Published var useBiometrics: Bool {
         didSet { userDefaults.set(useBiometrics, forKey: Self.biometricsKey) }
     }
@@ -26,12 +27,12 @@ final class AppSecurityManager: ObservableObject {
         let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
-            return "Биометрия"
+            return "Биометрия".appLocalized
         }
         return switch context.biometryType {
         case .faceID: "Face ID"
         case .touchID: "Touch ID"
-        default: "Биометрия"
+        default: "Биометрия".appLocalized
         }
     }
 
@@ -60,16 +61,42 @@ final class AppSecurityManager: ObservableObject {
     }
 
     func unlockWithBiometricsIfPossible() {
-        guard isLocked, hasPIN, useBiometrics, isBiometricsAvailable else { return }
-        let context = LAContext()
-        context.evaluatePolicy(
-            .deviceOwnerAuthenticationWithBiometrics,
-            localizedReason: "Подтвердите вход в приложение"
-        ) { [weak self] success, _ in
-            guard success else { return }
-            DispatchQueue.main.async {
-                self?.isLocked = false
+        guard isLocked, hasPIN, useBiometrics else { return }
+        Task {
+            if await authenticateWithBiometrics() {
+                isLocked = false
             }
+        }
+    }
+
+    func enableBiometrics() async {
+        useBiometrics = await authenticateWithBiometrics()
+    }
+
+    func disableBiometrics() {
+        useBiometrics = false
+    }
+
+    func resetSecurity() {
+        PINKeychain.delete()
+        hasPIN = false
+        isLocked = false
+        useBiometrics = false
+    }
+
+    private func authenticateWithBiometrics() async -> Bool {
+        guard isBiometricsAvailable, !isAuthenticatingBiometrics else { return false }
+        isAuthenticatingBiometrics = true
+        defer { isAuthenticatingBiometrics = false }
+
+        let context = LAContext()
+        do {
+            return try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: "Подтвердите вход в приложение".appLocalized
+            )
+        } catch {
+            return false
         }
     }
 }
@@ -108,5 +135,14 @@ private enum PINKeychain {
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         ]
         return SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess
+    }
+
+    static func delete() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 }

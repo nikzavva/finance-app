@@ -15,6 +15,8 @@ final class TransactionsListViewModel: ObservableObject {
 
     private let transactionsService: TransactionsServicing
 
+    private let accountsService: BankAccountsServicing
+
     private let categoriesService: CategoriesServicing
 
     private let notificationCenter: NotificationCenter
@@ -29,14 +31,20 @@ final class TransactionsListViewModel: ObservableObject {
 
     private var selectedCategory: Category?
 
+    private var selectedCurrency = AppSettings.currentCurrency
+
+    private var isActive = false
+
     init(
         direction: Direction,
         transactionsService: TransactionsServicing? = nil,
+        accountsService: BankAccountsServicing? = nil,
         categoriesService: CategoriesServicing? = nil,
         notificationCenter: NotificationCenter = .default
     ) {
         self.direction = direction
         self.transactionsService = transactionsService ?? TransactionsService()
+        self.accountsService = accountsService ?? BankAccountsService()
         self.categoriesService = categoriesService ?? CategoriesService()
         self.notificationCenter = notificationCenter
 
@@ -48,21 +56,31 @@ final class TransactionsListViewModel: ObservableObject {
         self.formatter = formatter
     }
 
-    var formattedTotalAmount: String {
-        AmountInputFormatter.format(totalAmount, with: formatter) + " ₽"
-    }
-
-    var totalTitle: String {
-        direction == .income ? "доходы, всего" : "расходы, всего"
+    func formattedTotalAmount(currencySymbol: String) -> String {
+        AmountInputFormatter.format(totalAmount, with: formatter) + " \(currencySymbol)"
     }
 
     func category(for transaction: Transaction) -> Category? {
         categories.first { $0.id == transaction.categoryId }
     }
 
-    func onAppear(selectedDate: Date, selectedCategory: Category?) {
+    func onAppear(
+        selectedDate: Date,
+        selectedCategory: Category?,
+        currency: AppCurrency? = nil
+    ) {
+        selectedCurrency = currency ?? AppSettings.currentCurrency
+        isActive = true
         observeTransactionChanges()
         loadCategories()
+        loadTransactions(selectedDate: selectedDate, selectedCategory: selectedCategory)
+    }
+
+    func setCurrency(_ currency: AppCurrency) {
+        guard selectedCurrency != currency else { return }
+        selectedCurrency = currency
+        selectedTransaction = nil
+        guard isActive else { return }
         loadTransactions(selectedDate: selectedDate, selectedCategory: selectedCategory)
     }
 
@@ -94,14 +112,26 @@ final class TransactionsListViewModel: ObservableObject {
         let categoryID = selectedCategory?.id
         let currentSortOrder = sortOrder
         let currentDirection = direction
+        let currentCurrency = selectedCurrency
+        let accountsService = self.accountsService
+        let transactionsService = self.transactionsService
 
         transactionsLoadTask?.cancel()
         transactionsLoadTask = Task { [weak self] in
             guard let self else { return }
-            let all = await transactionsService.fetchTransactions(from: startOfDay, to: endOfDay)
+            async let transactionsTask = transactionsService.fetchTransactions(from: startOfDay, to: endOfDay)
+            async let accountsTask = accountsService.fetchAccounts()
+            let (all, accounts) = await (transactionsTask, accountsTask)
             guard !Task.isCancelled else { return }
 
+            let accountIDs = Set(
+                accounts
+                    .filter { $0.currency == currentCurrency.rawValue }
+                    .map(\.id)
+            )
+
             let filtered = all.filter { transaction in
+                accountIDs.contains(transaction.accountId) &&
                 transaction.direction == currentDirection &&
                 (categoryID == nil || transaction.categoryId == categoryID)
             }
@@ -121,6 +151,7 @@ final class TransactionsListViewModel: ObservableObject {
     }
 
     func cancelLoading() {
+        isActive = false
         transactionsLoadTask?.cancel()
         categoriesLoadTask?.cancel()
         transactionsChangeCancellable = nil

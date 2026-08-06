@@ -5,13 +5,16 @@ struct AnalyticsView: UIViewControllerRepresentable {
     let initialDirection: Direction
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
+    @EnvironmentObject private var settings: AppSettings
 
     func makeUIViewController(context: Context) -> UINavigationController {
         let viewModel = AnalyticsViewModel(
             initialDirection: initialDirection,
             transactionsService: TransactionsService(),
             categoriesService: CategoriesService(),
-            accountsService: BankAccountsService()
+            accountsService: BankAccountsService(),
+            currency: settings.currency
         )
         let controller = AnalyticsViewController(viewModel: viewModel) {
             dismiss()
@@ -19,7 +22,11 @@ struct AnalyticsView: UIViewControllerRepresentable {
         return UINavigationController(rootViewController: controller)
     }
 
-    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {
+        _ = locale
+        (uiViewController.viewControllers.first as? AnalyticsViewController)?
+            .updateLocalization(currency: settings.currency)
+    }
 
     static func dismantleUIViewController(
         _ uiViewController: UINavigationController,

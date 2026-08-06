@@ -113,4 +113,8 @@ final class AppSettings: ObservableObject {
     static var currentCurrency: AppCurrency {
         AppCurrency(rawValue: UserDefaults.standard.string(forKey: currencyKey) ?? "") ?? .ruble
     }
+
+    static var currentLanguage: AppLanguage {
+        AppLanguage(rawValue: UserDefaults.standard.string(forKey: languageKey) ?? "") ?? .russian
+    }
 }

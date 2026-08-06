@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct BankAccountsView: View {
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel = BankAccountsViewModel()
     
     var body: some View {
         ZStack {
             VStack {
                 VStack(alignment: .leading, spacing: UIConstants.Spacing.small) {
-                    Text("баланс, всего")
+                    Text(settings.language.text("баланс, всего", "total balance"))
                         .font(.callout)
                         .foregroundColor(.secondary)
                     SpoilerView(isHidden: viewModel.isBalanceHidden) {
-                        Text(viewModel.formattedTotalBalance + " ₽")
+                        Text(viewModel.formattedTotalBalance + " \(settings.currency.symbol)")
                             .font(.system(size: UIConstants.Sizes.totalAmountFontSize, weight: .bold, design: .rounded))
                     }
                 }
@@ -46,6 +47,10 @@ struct BankAccountsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showAddAccount) {
             CreateAccountView { newAccount in
+                if let currency = AppCurrency(rawValue: newAccount.currency) {
+                    settings.currency = currency
+                    viewModel.setCurrency(currency)
+                }
                 Task {
                     await viewModel.createAccount(newAccount)
                 }
@@ -54,7 +59,7 @@ struct BankAccountsView: View {
         .sheet(item: $viewModel.selectedAccount) { account in
             BalanceAdjustmentView(
                 account: account,
-                appCurrency: "Руб.",
+                appCurrency: account.currency,
                 formatter: viewModel.formatter,
                 onSave: { newAmount, newDate in
                     Task {
@@ -73,7 +78,10 @@ struct BankAccountsView: View {
             )
         }
         .onAppear {
-            viewModel.onAppear()
+            viewModel.onAppear(currency: settings.currency)
+        }
+        .onChange(of: settings.currency) { _, currency in
+            viewModel.setCurrency(currency)
         }
         .onDisappear {
             viewModel.onDisappear()

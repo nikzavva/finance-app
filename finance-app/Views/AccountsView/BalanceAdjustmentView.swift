@@ -6,6 +6,7 @@ struct BalanceAdjustmentView: View {
     let onDelete: (Int) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: BalanceAdjustmentViewModel
     @FocusState private var isAmountFocused: Bool
 
@@ -54,7 +55,7 @@ struct BalanceAdjustmentView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(appCurrency)
+                    Text(AppCurrency(rawValue: appCurrency)?.title(for: settings.language) ?? appCurrency)
                         .font(.body)
                         .foregroundColor(.secondary)
                 }

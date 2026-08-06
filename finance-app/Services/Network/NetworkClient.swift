@@ -21,23 +21,23 @@ enum NetworkError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Некорректный URL"
+            return "Некорректный URL".appLocalized
         case .httpError(let statusCode, let message):
-            return "Ошибка сервера (\(statusCode)): \(message)"
+            return "\("Ошибка сервера".appLocalized) (\(statusCode)): \(message)"
         case .serializationError:
-            return "Ошибка подготовки запроса"
+            return "Ошибка подготовки запроса".appLocalized
         case .deserializationError:
-            return "Ошибка обработки ответа сервера"
+            return "Ошибка обработки ответа сервера".appLocalized
         case .noData:
-            return "Нет данных от сервера"
+            return "Нет данных от сервера".appLocalized
         case .unauthorized:
-            return "Не удалось авторизоваться"
+            return "Не удалось авторизоваться".appLocalized
         case .notFound:
-            return "Данные не найдены"
+            return "Данные не найдены".appLocalized
         case .conflict:
-            return "Конфликт данных"
+            return "Конфликт данных".appLocalized
         case .networkUnavailable:
-            return "Нет подключения к сети"
+            return "Нет подключения к сети".appLocalized
         }
     }
 }
@@ -277,7 +277,7 @@ final class NetworkClient {
     
     private func validateResponse(_ response: URLResponse, data: Data) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.httpError(statusCode: 0, message: "Некорректный ответ")
+            throw NetworkError.httpError(statusCode: 0, message: "Некорректный ответ".appLocalized)
         }
         
         switch httpResponse.statusCode {

@@ -22,7 +22,7 @@ struct BankAccountRow: View {
                 Spacer()
                 
                 let amount = account.balance as NSDecimalNumber
-                Text((formatter.string(from: amount) ?? "0") + " ₽")
+                Text((formatter.string(from: amount) ?? "0") + " \(AppCurrency(rawValue: account.currency)?.symbol ?? account.currency)")
                     .font(.body)
                     .foregroundColor(.primary)
             }

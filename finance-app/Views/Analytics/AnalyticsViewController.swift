@@ -50,8 +50,16 @@ final class AnalyticsViewController: UIViewController {
         viewModel.stop()
     }
 
+    func updateLocalization(currency: AppCurrency) {
+        title = "Аналитика".appLocalized
+        viewModel.updateCurrency(currency)
+        pieChartView.currencySymbol = viewModel.currencySymbol
+        viewModel.refreshLocalization()
+        pieChartView.setNeedsDisplay()
+    }
+
     private func configureNavigation() {
-        title = "Аналитика"
+        title = "Аналитика".appLocalized
         view.backgroundColor = .systemBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -65,7 +73,7 @@ final class AnalyticsViewController: UIViewController {
 
     private func configureChartHeader() {
         pieChartView.translatesAutoresizingMaskIntoConstraints = false
-        pieChartView.currencySymbol = "₽"
+        pieChartView.currencySymbol = viewModel.currencySymbol
         pieChartView.addGestureRecognizer(
             UITapGestureRecognizer(target: self, action: #selector(chartTapped))
         )
@@ -164,7 +172,7 @@ final class AnalyticsViewController: UIViewController {
     @objc private func chartTapped() {
         let detailsViewModel = AnalyticsChartDetailsViewModel(
             entities: viewModel.chartEntities,
-            currencySymbol: "₽"
+            currencySymbol: viewModel.currencySymbol
         )
         let controller = AnalyticsChartDetailsViewController(viewModel: detailsViewModel)
         presentSheet(controller, sizing: .resizable)
@@ -334,7 +342,7 @@ extension AnalyticsViewController: UITableViewDelegate {
         let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: identifier)
             ?? UITableViewHeaderFooterView(reuseIdentifier: identifier)
         var content = UIListContentConfiguration.header()
-        content.text = "Транзакции"
+        content.text = "Транзакции".appLocalized
         content.textProperties.color = .label
         let font = UIFont.preferredFont(forTextStyle: .title2)
         if let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold) {

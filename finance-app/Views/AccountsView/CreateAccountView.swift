@@ -83,9 +83,14 @@ struct CreateAccountView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(settings.currency.title(for: settings.language))
-                        .font(.body)
-                        .foregroundColor(.secondary)
+                    Picker("", selection: $viewModel.currency) {
+                        ForEach(AppCurrency.allCases) { currency in
+                            Text(currency.title(for: settings.language))
+                                .tag(currency)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
                 .padding(.horizontal)
                 .padding(.vertical)
@@ -110,6 +115,7 @@ struct CreateAccountView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         guard let account = viewModel.submit() else { return }
+                        settings.currency = viewModel.currency
                         onCreate(account)
                         dismiss()
                     }) {
