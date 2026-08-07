@@ -7,8 +7,9 @@ final class AnalyticsViewController: UIViewController {
         case transactions
     }
 
-    private enum SheetSizing {
+    private enum SheetSizing: Equatable {
         case medium
+        case expandedOnPad
         case resizable
     }
 
@@ -189,7 +190,7 @@ final class AnalyticsViewController: UIViewController {
         let controller = AnalyticsPeriodViewController(
             viewModel: viewModel.makePeriodViewModel()
         )
-        presentSheet(controller, sizing: .medium)
+        presentSheet(controller, sizing: .expandedOnPad)
     }
 
     private func presentSortOrderPicker() {
@@ -223,15 +224,22 @@ final class AnalyticsViewController: UIViewController {
             case .medium:
                 sheet.detents = [.medium()]
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            case .expandedOnPad:
+                sheet.detents = traitCollection.userInterfaceIdiom == .pad
+                    ? [.large()]
+                    : [.medium()]
+                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
             case .resizable:
                 sheet.prefersGrabberVisible = true
-                sheet.detents = [.medium(), .large()]
+                sheet.detents = traitCollection.userInterfaceIdiom == .pad
+                    ? [.large()]
+                    : [.medium(), .large()]
             }
         }
 
         present(navigationController, animated: true) { [weak self, weak navigationController] in
-            guard case .medium = sizing,
-                  let self,
+            guard let self,
+                  sizing != .resizable,
                   let containerView = navigationController?.presentationController?.containerView else {
                 return
             }

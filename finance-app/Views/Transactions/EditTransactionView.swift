@@ -148,13 +148,19 @@ struct EditTransactionView: View {
                 CategorySelectionView(direction: viewModel.transaction.direction) { category in
                     viewModel.selectCategory(category)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .sheet(isPresented: $viewModel.showAccountSelection) {
                 AccountSelectionView(currency: viewModel.accountCurrency) { account in
                     viewModel.selectAccount(account)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .alert("Удалить операцию?", isPresented: $viewModel.showDeleteConfirmation) {
                 Button("Удалить", role: .destructive) {
@@ -188,6 +194,6 @@ struct EditTransactionView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

@@ -149,13 +149,19 @@ struct CreateTransactionView: View {
                 CategorySelectionView(direction: viewModel.direction) { category in
                     viewModel.selectCategory(category)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .sheet(isPresented: $viewModel.showAccountSelection) {
                 AccountSelectionView(currency: viewModel.currency) { account in
                     viewModel.selectAccount(account)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .alert("Ошибка создания данных", isPresented: $viewModel.showValidationError) {
                 Button("ОК", role: .cancel) {}
@@ -182,6 +188,6 @@ struct CreateTransactionView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

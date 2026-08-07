@@ -60,7 +60,8 @@ struct FinanceAppView: View {
                 SettingsView(
                     categoryDirection: viewModel.selectedTab == .accounts
                         ? nil
-                        : viewModel.selectedDirection
+                        : viewModel.selectedDirection,
+                    selectedCategory: viewModel.selectedCategory
                 ) { category, direction in
                     viewModel.selectCategory(category, for: direction)
                 }

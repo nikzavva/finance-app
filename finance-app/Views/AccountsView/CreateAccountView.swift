@@ -140,6 +140,6 @@ struct CreateAccountView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

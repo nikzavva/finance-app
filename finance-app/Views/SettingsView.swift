@@ -20,6 +20,7 @@ struct SettingsView: View {
     }
 
     let categoryDirection: Direction?
+    let selectedCategory: Category?
     let onCategorySelected: (Category, Direction) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -142,7 +143,10 @@ struct SettingsView: View {
         }
         .id(settings.theme)
         .settingsTheme(settings.theme)
-        .presentationDetents([.medium, .large])
+        .adaptivePresentationDetents(
+            iPhone: [.medium, .large],
+            iPad: [.large]
+        )
         .sheet(item: $destination) { destination in
             switch destination {
             case .currency:
@@ -154,10 +158,17 @@ struct SettingsView: View {
                 )
             case .categories:
                 if let categoryDirection {
-                    CategorySelectionView(direction: categoryDirection) { category in
+                    CategorySelectionView(
+                        direction: categoryDirection,
+                        selectedCategoryID: selectedCategory?.id,
+                        dismissesOnSelection: false
+                    ) { category in
                         onCategorySelected(category, categoryDirection)
                     }
-                    .presentationDetents([.medium, .large])
+                    .adaptivePresentationDetents(
+                        iPhone: [.medium, .large],
+                        iPad: [.large]
+                    )
                     .presentationDragIndicator(.visible)
                 }
             case .theme:
@@ -282,7 +293,7 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
         }
         .id(settings.theme)
         .settingsTheme(settings.theme)
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }
 

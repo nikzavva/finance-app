@@ -2,17 +2,23 @@ import SwiftUI
 
 struct CategorySelectionView: View {
     let onSelect: (Category) -> Void
+    let dismissesOnSelection: Bool
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: CategorySelectionViewModel
+    @State private var selectedCategoryID: Int?
     @FocusState private var isSearchFocused: Bool
 
     init(
         direction: Direction,
+        selectedCategoryID: Int? = nil,
+        dismissesOnSelection: Bool = true,
         onSelect: @escaping (Category) -> Void
     ) {
         self.onSelect = onSelect
+        self.dismissesOnSelection = dismissesOnSelection
+        _selectedCategoryID = State(initialValue: selectedCategoryID)
         _viewModel = StateObject(
             wrappedValue: CategorySelectionViewModel(
                 direction: direction
@@ -29,8 +35,13 @@ struct CategorySelectionView: View {
                             .padding(.horizontal)
                         ForEach(viewModel.filteredCategories, id: \.id) { category in
                             Button {
+                                selectedCategoryID = selectedCategoryID == category.id
+                                    ? nil
+                                    : category.id
                                 onSelect(category)
-                                dismiss()
+                                if dismissesOnSelection {
+                                    dismiss()
+                                }
                             } label: {
                                 HStack {
                                     Text(String(category.emoji))
@@ -38,6 +49,10 @@ struct CategorySelectionView: View {
                                     Text(category.localizedName(for: settings.language))
                                         .font(.body)
                                     Spacer()
+                                    if selectedCategoryID == category.id {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.tint)
+                                    }
                                 }
                                 .padding(.horizontal)
                                 .padding(.vertical)

@@ -39,7 +39,10 @@ struct PINCodeView: View {
         }
         .id(settings.theme)
         .preferredColorScheme(settings.theme.colorScheme)
-        .presentationDetents(mode == .change ? [.medium] : [.large])
+        .adaptivePresentationDetents(
+            iPhone: mode == .change ? [.medium] : [.large],
+            iPad: [.large]
+        )
         .alert(errorTitle, isPresented: $showError) {
             Button("ОК", role: .cancel) {}
         }

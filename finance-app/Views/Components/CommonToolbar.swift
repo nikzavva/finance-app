@@ -19,7 +19,7 @@ struct CommonToolbar: ToolbarContent {
             .sheet(isPresented: $showDatePicker) {
                 DatePicker("Выберите дату", selection: $selectedDate, in: ...Date(), displayedComponents: .date)
                     .datePickerStyle(.graphical)
-                    .presentationDetents([.medium])
+                    .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
             }
         }
         
