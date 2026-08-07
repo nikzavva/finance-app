@@ -340,7 +340,7 @@ final class AnalyticsViewModel {
             let amount = amountFormatter.string(from: transaction.amount as NSDecimalNumber) ?? "0"
             return AnalyticsTransactionRowViewData(
                 emoji: String(category?.emoji ?? "💳"),
-                title: transaction.comment ?? "Без описания".appLocalized,
+                title: transaction.displayComment,
                 amount: "\(amount) \(currency.symbol)"
             )
         }
@@ -348,7 +348,7 @@ final class AnalyticsViewModel {
         let groupedTransactions = Dictionary(grouping: transactions, by: \.categoryId)
         chartEntities = groupedTransactions.map { categoryID, categoryTransactions in
             let value = categoryTransactions.reduce(Decimal.zero) { $0 + $1.amount }
-            let label = categoriesByID[categoryID]?.name ?? "Без статьи".appLocalized
+            let label = categoriesByID[categoryID]?.localizedName ?? "Без статьи".appLocalized
             return Entity(value: value, label: label)
         }
         .sorted { first, second in
@@ -398,7 +398,7 @@ final class AnalyticsViewModel {
             guard let categoryIDs = filters.categoryIDs else { return "Все статьи".appLocalized }
             let names = categories
                 .filter { categoryIDs.contains($0.id) }
-                .map(\.name)
+                .map(\.localizedName)
             return names.isEmpty ? "Нет статей".appLocalized : names.joined(separator: ", ")
         case .account:
             guard let accountID = filters.accountID else { return "Все счета".appLocalized }

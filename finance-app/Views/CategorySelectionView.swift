@@ -4,6 +4,7 @@ struct CategorySelectionView: View {
     let onSelect: (Category) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: CategorySelectionViewModel
     @FocusState private var isSearchFocused: Bool
 
@@ -34,7 +35,7 @@ struct CategorySelectionView: View {
                                 HStack {
                                     Text(String(category.emoji))
                                         .font(.title2)
-                                    Text(category.name)
+                                    Text(category.localizedName(for: settings.language))
                                         .font(.body)
                                     Spacer()
                                 }

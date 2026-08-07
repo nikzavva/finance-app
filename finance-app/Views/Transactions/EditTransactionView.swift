@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EditTransactionView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: EditTransactionViewModel
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
@@ -31,7 +32,10 @@ struct EditTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(viewModel.selectedCategory?.name ?? "Выбрать".appLocalized)
+                        Text(
+                            viewModel.selectedCategory?.localizedName(for: settings.language)
+                                ?? "Выбрать".appLocalized(for: settings.language)
+                        )
                             .font(.body)
                             .foregroundColor(.secondary)
                     }

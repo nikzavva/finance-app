@@ -269,7 +269,7 @@ final class AnalyticsCategoriesFilterViewModel {
     func row(at index: Int) -> AnalyticsCategoryRowViewData {
         let category = categories[index]
         return AnalyticsCategoryRowViewData(
-            title: "\(category.emoji)  \(category.name)",
+            title: "\(category.emoji)  \(category.localizedName)",
             isSelected: selectedCategoryIDs.contains(category.id)
         )
     }

@@ -13,10 +13,16 @@ final class AppSecurityManager: ObservableObject {
     }
 
     private static let biometricsKey = "use_biometrics"
+    private static let installationMarkerKey = "security_installation_marker"
     private let userDefaults: UserDefaults
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
+        if userDefaults.object(forKey: Self.installationMarkerKey) == nil {
+            PINKeychain.delete()
+            userDefaults.removeObject(forKey: Self.biometricsKey)
+            userDefaults.set(UUID().uuidString, forKey: Self.installationMarkerKey)
+        }
         let hasPIN = PINKeychain.read() != nil
         self.hasPIN = hasPIN
         self.isLocked = hasPIN
@@ -49,6 +55,18 @@ final class AppSecurityManager: ObservableObject {
         return true
     }
 
+    func completeInitialSetup(pin: String, useBiometrics: Bool) -> Bool {
+        guard pin.count == 4,
+              pin.allSatisfy(\.isNumber),
+              PINKeychain.save(pin) else {
+            return false
+        }
+        self.useBiometrics = useBiometrics
+        hasPIN = true
+        isLocked = false
+        return true
+    }
+
     func unlock(with pin: String) -> Bool {
         guard PINKeychain.read() == pin else { return false }
         isLocked = false
@@ -70,7 +88,15 @@ final class AppSecurityManager: ObservableObject {
     }
 
     func enableBiometrics() async {
-        useBiometrics = await authenticateWithBiometrics()
+        useBiometrics = await authenticateWithBiometrics(
+            reason: "Подтвердите вход в приложение".appLocalized
+        )
+    }
+
+    func authenticateInitialBiometrics() async -> Bool {
+        await authenticateWithBiometrics(
+            reason: "Подтвердите подключение биометрического входа".appLocalized
+        )
     }
 
     func disableBiometrics() {
@@ -84,7 +110,7 @@ final class AppSecurityManager: ObservableObject {
         useBiometrics = false
     }
 
-    private func authenticateWithBiometrics() async -> Bool {
+    private func authenticateWithBiometrics(reason: String? = nil) async -> Bool {
         guard isBiometricsAvailable, !isAuthenticatingBiometrics else { return false }
         isAuthenticatingBiometrics = true
         defer { isAuthenticatingBiometrics = false }
@@ -93,7 +119,7 @@ final class AppSecurityManager: ObservableObject {
         do {
             return try await context.evaluatePolicy(
                 .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: "Подтвердите вход в приложение".appLocalized
+                localizedReason: reason ?? "Подтвердите вход в приложение".appLocalized
             )
         } catch {
             return false

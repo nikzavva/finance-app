@@ -17,7 +17,7 @@ struct TransactionRow: View {
                             .stroke(Color(.systemGray4))
                     )
 
-                Text(transaction.comment ?? "Без описания".appLocalized)
+                Text(transaction.displayComment)
                     .font(.body)
                     .foregroundColor(.primary)
 

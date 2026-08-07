@@ -364,6 +364,7 @@ private final class AnalyticsCustomPeriodCell: UITableViewCell {
         accessibilityLabel: String,
         action: Selector
     ) {
+        datePicker.locale = AppSettings.currentLanguage.locale
         datePicker.datePickerMode = .date
         datePicker.preferredDatePickerStyle = .compact
         datePicker.maximumDate = Date()

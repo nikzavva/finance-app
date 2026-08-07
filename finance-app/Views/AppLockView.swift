@@ -28,10 +28,16 @@ struct AppLockView: View {
                 }
 
             if security.useBiometrics && security.isBiometricsAvailable {
-                Button(security.biometryName) {
+                Button(
+                    String(
+                        format: "Войти с %@".appLocalized,
+                        security.biometryName
+                    )
+                ) {
                     security.unlockWithBiometricsIfPossible()
                 }
                 .buttonStyle(.bordered)
+                .disabled(security.isAuthenticatingBiometrics)
             }
 
             DeleteAllDataButton()
@@ -40,9 +46,6 @@ struct AppLockView: View {
         .padding()
         .alert("Неверный PIN-код", isPresented: $isInvalidPIN) {
             Button("ОК", role: .cancel) {}
-        }
-        .onAppear {
-            security.unlockWithBiometricsIfPossible()
         }
     }
 }

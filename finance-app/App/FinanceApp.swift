@@ -58,13 +58,8 @@ private struct AppContentView: View {
             Text(viewModel.migrationErrorMessage)
         }
         .onChange(of: scenePhase) { _, phase in
-            switch phase {
-            case .active:
-                security.unlockWithBiometricsIfPossible()
-            case .background:
+            if phase == .background {
                 security.lockIfNeeded()
-            default:
-                break
             }
         }
     }

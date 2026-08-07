@@ -107,9 +107,8 @@ final class BankAccountsViewModel: ObservableObject {
         guard deletingAccountIDs.insert(id).inserted else { return }
         defer { deletingAccountIDs.remove(id) }
 
-        let transactions = await transactionsService.fetchTransactionsForAccount(id: id)
-        guard transactions.isEmpty else {
-            presentDeleteError("Сначала удалите все операции по этому счёту".appLocalized)
+        guard await transactionsService.deleteTransactionsForAccount(id: id) else {
+            presentDeleteError("Не удалось удалить операции по этому счёту".appLocalized)
             selectedAccount = nil
             return
         }
@@ -119,7 +118,7 @@ final class BankAccountsViewModel: ObservableObject {
         case .deleted:
             apply(allAccounts.filter { $0.id != id })
         case .hasTransactions:
-            presentDeleteError("Сначала удалите все операции по этому счёту".appLocalized)
+            presentDeleteError("Не удалось удалить операции по этому счёту".appLocalized)
         case .failed:
             presentDeleteError("Произошла ошибка. Попробуйте ещё раз".appLocalized)
         }

@@ -103,7 +103,7 @@ struct BalanceAdjustmentView: View {
                 }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Счёт будет удалён. Это действие нельзя отменить")
+                Text("Счёт и все операции по нему будут удалены. Это действие нельзя отменить")
             }
             .gesture(
                 DragGesture()

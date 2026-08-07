@@ -21,8 +21,10 @@ final class CategorySelectionViewModel: ObservableObject {
         guard !searchText.isEmpty else { return categories }
         let words = searchText.lowercased().split(separator: " ").map(String.init)
         return categories.filter { category in
-            let name = category.name.lowercased()
-            return words.allSatisfy { name.contains($0) }
+            let names = [category.name, category.localizedName].map { $0.lowercased() }
+            return words.allSatisfy { word in
+                names.contains { $0.contains(word) }
+            }
         }
     }
 

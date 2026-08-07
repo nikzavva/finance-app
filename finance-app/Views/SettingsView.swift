@@ -97,6 +97,9 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                     }
+
+                    DeleteAllDataButton()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.horizontal)
