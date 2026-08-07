@@ -13,15 +13,15 @@ enum AppCurrency: String, CaseIterable, Identifiable {
     func title(for language: AppLanguage) -> String {
         switch self {
         case .ruble:
-            return language == .english ? "Russian ruble" : "Рубли"
+            return "Рубли".appLocalized(for: language)
         case .dollar:
-            return language == .english ? "US dollar" : "Доллары"
+            return "Доллары".appLocalized(for: language)
         case .euro:
-            return language == .english ? "Euro" : "Евро"
+            return "Евро".appLocalized(for: language)
         case .pound:
-            return language == .english ? "Pound sterling" : "Фунты"
+            return "Фунты".appLocalized(for: language)
         case .yuan:
-            return language == .english ? "Chinese yuan" : "Юани"
+            return "Юани".appLocalized(for: language)
         }
     }
 
@@ -46,11 +46,11 @@ enum AppTheme: String, CaseIterable, Identifiable {
     func title(for language: AppLanguage) -> String {
         switch self {
         case .system:
-            return language == .english ? "System" : "Системная"
+            return "Системная".appLocalized(for: language)
         case .light:
-            return language == .english ? "Light" : "Светлая"
+            return "Светлая".appLocalized(for: language)
         case .dark:
-            return language == .english ? "Dark" : "Тёмная"
+            return "Тёмная".appLocalized(for: language)
         }
     }
 
@@ -71,8 +71,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .russian: "Русский"
-        case .english: "English"
+        case .russian: "Русский".appLocalized(for: .russian)
+        case .english: "English".appLocalized(for: .english)
         }
     }
 
@@ -80,9 +80,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         Locale(identifier: rawValue)
     }
 
-    func text(_ russian: String, _ english: String) -> String {
-        self == .english ? english : russian
-    }
 }
 
 @MainActor
@@ -96,10 +93,14 @@ final class AppSettings: ObservableObject {
     @Published var language: AppLanguage {
         didSet { userDefaults.set(language.rawValue, forKey: Self.languageKey) }
     }
+    @Published var hapticsEnabled: Bool {
+        didSet { userDefaults.set(hapticsEnabled, forKey: Self.hapticsKey) }
+    }
 
     private static let currencyKey = "app_currency"
     private static let themeKey = "app_theme"
     private static let languageKey = "app_language"
+    static let hapticsKey = "app_haptics_enabled"
 
     private let userDefaults: UserDefaults
 
@@ -108,6 +109,7 @@ final class AppSettings: ObservableObject {
         currency = AppCurrency(rawValue: userDefaults.string(forKey: Self.currencyKey) ?? "") ?? .ruble
         theme = AppTheme(rawValue: userDefaults.string(forKey: Self.themeKey) ?? "") ?? .system
         language = AppLanguage(rawValue: userDefaults.string(forKey: Self.languageKey) ?? "") ?? .russian
+        hapticsEnabled = userDefaults.object(forKey: Self.hapticsKey) as? Bool ?? true
     }
 
     static var currentCurrency: AppCurrency {
@@ -116,5 +118,9 @@ final class AppSettings: ObservableObject {
 
     static var currentLanguage: AppLanguage {
         AppLanguage(rawValue: UserDefaults.standard.string(forKey: languageKey) ?? "") ?? .russian
+    }
+
+    static var currentHapticsEnabled: Bool {
+        UserDefaults.standard.object(forKey: hapticsKey) as? Bool ?? true
     }
 }

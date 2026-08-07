@@ -43,7 +43,6 @@ public final class PieChartView: UIView {
     }
 
     private enum Animation {
-        static let halfDuration: TimeInterval = 0.45
         static let key = "PieChartTransition"
     }
 
@@ -181,7 +180,7 @@ public final class PieChartView: UIView {
         let contentWidth = readableWidth > .zero
             ? min(availableWidth, readableWidth)
             : availableWidth
-        return contentWidth * 2 / 3
+        return contentWidth * UIConstants.Ratios.chartDiameter
     }
 
     private func donutWidth(for diameter: CGFloat) -> CGFloat {
@@ -315,7 +314,7 @@ public final class PieChartView: UIView {
 
         let animation = CAAnimationGroup()
         animation.animations = [rotation, fade]
-        animation.duration = Animation.halfDuration
+        animation.duration = UIConstants.Animation.halfDuration
         animation.timingFunction = timingFunction
 
         CATransaction.begin()

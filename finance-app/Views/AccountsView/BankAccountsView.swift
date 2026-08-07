@@ -8,7 +8,7 @@ struct BankAccountsView: View {
         ZStack {
             VStack {
                 VStack(alignment: .leading, spacing: UIConstants.Spacing.small) {
-                    Text(settings.language.text("баланс, всего", "total balance"))
+                    Text("баланс, всего".appLocalized(for: settings.language))
                         .font(.callout)
                         .foregroundColor(.secondary)
                     SpoilerView(isHidden: viewModel.isBalanceHidden) {
@@ -40,7 +40,12 @@ struct BankAccountsView: View {
             OfflineIndicator()
         }
         .onShake {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(
+                .spring(
+                    response: UIConstants.Animation.balanceSpringResponse,
+                    dampingFraction: UIConstants.Animation.balanceSpringDampingFraction
+                )
+            ) {
                 viewModel.isBalanceHidden.toggle()
             }
         }

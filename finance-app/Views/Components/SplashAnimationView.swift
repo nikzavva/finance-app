@@ -10,6 +10,7 @@ struct SplashAnimationView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> SplashAnimationPlayerView {
         let animationView = SplashAnimationPlayerView(animationName: "splash_animation")
+        HapticsManager.shared.playSplash()
 
         DispatchQueue.main.async {
             guard animationView.hasAnimation else {
@@ -39,6 +40,7 @@ struct SplashAnimationView: UIViewRepresentable {
         func finish() {
             guard !hasFinished else { return }
             hasFinished = true
+            HapticsManager.shared.stopSplash()
             onFinished()
         }
     }

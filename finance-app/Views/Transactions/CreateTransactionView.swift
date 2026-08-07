@@ -130,6 +130,7 @@ struct CreateTransactionView: View {
                     Button {
                         Task {
                             if await viewModel.submit() {
+                                HapticsManager.shared.play(.confirmation)
                                 dismiss()
                             }
                         }

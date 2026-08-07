@@ -18,6 +18,7 @@
 "Выключена" = "Off";
 "Рубли" = "Russian rubles";
 "Доллары" = "US dollars";
+"Евро" = "Euro";
 "Фунты" = "Pounds sterling";
 "Юани" = "Chinese yuan";
 "Системная" = "System";
@@ -156,3 +157,8 @@
 "Домашние животные" = "Pets";
 "Хобби" = "Hobbies";
 "Кредиты" = "Loans";
+"Хаптики" = "Haptics";
+"Русский" = "Russian";
+"English" = "English";
+"Face ID" = "Face ID";
+"Touch ID" = "Touch ID";

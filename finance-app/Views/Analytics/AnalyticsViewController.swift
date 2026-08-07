@@ -404,7 +404,7 @@ private final class AnalyticsTransactionCell: UITableViewCell {
         emojiLabel.font = .preferredFont(forTextStyle: .title3)
         emojiLabel.textAlignment = .center
         emojiLabel.layer.cornerRadius = UIConstants.Sizes.icon / 2
-        emojiLabel.layer.borderWidth = 1 / UIScreen.main.scale
+        emojiLabel.layer.borderWidth = UIConstants.Sizes.hairlineWidth
         emojiLabel.layer.borderColor = UIColor.systemGray5.cgColor
         emojiLabel.clipsToBounds = true
         contentView.addSubview(emojiLabel)

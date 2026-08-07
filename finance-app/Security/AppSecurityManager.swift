@@ -36,8 +36,8 @@ final class AppSecurityManager: ObservableObject {
             return "Биометрия".appLocalized
         }
         return switch context.biometryType {
-        case .faceID: "Face ID"
-        case .touchID: "Touch ID"
+        case .faceID: "Face ID".appLocalized
+        case .touchID: "Touch ID".appLocalized
         default: "Биометрия".appLocalized
         }
     }

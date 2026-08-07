@@ -39,15 +39,20 @@ private struct AppContentView: View {
                 .background(Color(uiColor: .systemBackground))
                 .ignoresSafeArea()
             } else if !security.hasPIN {
-                InitialSecuritySetupView()
+                PINCodeView(mode: .setup)
             } else {
                 if security.isLocked {
-                    AppLockView()
+                    PINCodeView(mode: .unlock)
                 } else {
                     FinanceAppView()
                         .networkErrorAlert()
                 }
             }
+        }
+        .onAppear {
+            AppPrivacyController.setProtected(
+                scenePhase != .active && !security.isAuthenticatingBiometrics
+            )
         }
         .task {
             await viewModel.prepare()
@@ -58,8 +63,16 @@ private struct AppContentView: View {
             Text(viewModel.migrationErrorMessage)
         }
         .onChange(of: scenePhase) { _, phase in
+            AppPrivacyController.setProtected(
+                phase != .active && !security.isAuthenticatingBiometrics
+            )
             if phase == .background {
                 security.lockIfNeeded()
+            }
+        }
+        .onChange(of: security.isAuthenticatingBiometrics) { _, isAuthenticating in
+            if scenePhase == .background && !isAuthenticating {
+                AppPrivacyController.setProtected(true)
             }
         }
     }

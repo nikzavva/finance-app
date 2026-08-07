@@ -67,6 +67,9 @@ struct FinanceAppView: View {
             }
         }
         .tint(Color.accentColor)
+        .onChange(of: viewModel.selectedTab) {
+            HapticsManager.shared.play(.selection)
+        }
     }
 }
 

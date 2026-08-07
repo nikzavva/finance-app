@@ -86,6 +86,7 @@ struct BalanceAdjustmentView: View {
                     Button(action: {
                         guard let submission = viewModel.submitBalance() else { return }
                         onSave(submission.amount, submission.date)
+                        HapticsManager.shared.play(.confirmation)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")

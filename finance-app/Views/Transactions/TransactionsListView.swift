@@ -69,10 +69,8 @@ struct TransactionsListView: View {
         VStack {
             VStack(alignment: .leading, spacing: UIConstants.Spacing.small) {
                 Text(
-                    settings.language.text(
-                        viewModel.direction == .income ? "доходы, всего" : "расходы, всего",
-                        viewModel.direction == .income ? "total income" : "total expenses"
-                    )
+                    (viewModel.direction == .income ? "доходы, всего" : "расходы, всего")
+                        .appLocalized(for: settings.language)
                 )
                     .font(.callout)
                     .foregroundColor(.secondary)

@@ -7,7 +7,6 @@ struct SettingsView: View {
         case theme
         case language
         case pin
-        case biometrics
 
         var id: String {
             switch self {
@@ -16,7 +15,6 @@ struct SettingsView: View {
             case .theme: "theme"
             case .language: "language"
             case .pin: "pin"
-            case .biometrics: "biometrics"
             }
         }
     }
@@ -32,11 +30,11 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 28) {
-                    SettingsSection(title: settings.language.text("Кошелёк", "Wallet")) {
+                LazyVStack(alignment: .leading, spacing: UIConstants.Spacing.settingsSection) {
+                    SettingsSection(title: "Кошелёк".appLocalized(for: settings.language)) {
                     Button { destination = .currency } label: {
                         SettingsRow(
-                            title: settings.language.text("Валюта", "Currency"),
+                            title: "Валюта".appLocalized(for: settings.language),
                             value: settings.currency.title(for: settings.language)
                         )
                     }
@@ -46,18 +44,18 @@ struct SettingsView: View {
 
                     Button { destination = .categories } label: {
                         SettingsRow(
-                            title: settings.language.text("Статьи", "Categories"),
-                            value: categoryDirection.map(categoryDirectionTitle) ?? settings.language.text("Недоступно", "Unavailable")
+                            title: "Статьи".appLocalized(for: settings.language),
+                            value: categoryDirection.map(categoryDirectionTitle) ?? "Недоступно".appLocalized(for: settings.language)
                         )
                     }
                     .buttonStyle(.plain)
                     .disabled(categoryDirection == nil)
                     }
 
-                    SettingsSection(title: settings.language.text("Интерфейс", "Interface")) {
+                    SettingsSection(title: "Интерфейс".appLocalized(for: settings.language)) {
                     Button { destination = .theme } label: {
                         SettingsRow(
-                            title: settings.language.text("Тема оформления", "Appearance"),
+                            title: "Тема оформления".appLocalized(for: settings.language),
                             value: settings.theme.title(for: settings.language)
                         )
                     }
@@ -67,44 +65,70 @@ struct SettingsView: View {
 
                     Button { destination = .language } label: {
                         SettingsRow(
-                            title: settings.language.text("Язык", "Language"),
+                            title: "Язык".appLocalized(for: settings.language),
                             value: settings.language.title
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    }
-
-                    SettingsSection(title: settings.language.text("Безопасность", "Security")) {
-                    Button { destination = .pin } label: {
-                        SettingsRow(
-                            title: settings.language.text("PIN-код", "PIN code"),
-                            value: security.hasPIN
-                                ? settings.language.text("Установлен", "Set")
-                                : settings.language.text("Не установлен", "Not set")
                         )
                     }
                     .buttonStyle(.plain)
 
                     Divider()
 
-                    Button { destination = .biometrics } label: {
+                    Toggle(
+                        "Хаптики".appLocalized(for: settings.language),
+                        isOn: $settings.hapticsEnabled
+                    )
+                    .toggleStyle(.switch)
+                    .padding(.vertical)
+                    .onChange(of: settings.hapticsEnabled) { _, enabled in
+                        if enabled {
+                            HapticsManager.shared.play(.selection)
+                        }
+                    }
+                    }
+
+                    SettingsSection(title: "Безопасность".appLocalized(for: settings.language)) {
+                    Button { destination = .pin } label: {
                         SettingsRow(
-                            title: security.biometryName,
-                            value: security.useBiometrics
-                                ? settings.language.text("Включена", "On")
-                                : settings.language.text("Выключена", "Off")
+                            title: "PIN-код".appLocalized(for: settings.language),
+                            value: security.hasPIN
+                                ? "Установлен".appLocalized(for: settings.language)
+                                : "Не установлен".appLocalized(for: settings.language)
                         )
                     }
                     .buttonStyle(.plain)
+
+                    Divider()
+
+                    Toggle(
+                        security.biometryName,
+                        isOn: Binding(
+                            get: { security.useBiometrics },
+                            set: { isEnabled in
+                                if isEnabled {
+                                    Task { await security.enableBiometrics() }
+                                } else {
+                                    security.disableBiometrics()
+                                }
+                            }
+                        )
+                    )
+                    .toggleStyle(.switch)
+                    .padding(.vertical)
+                    .disabled(
+                        !security.isBiometricsAvailable ||
+                        !security.hasPIN ||
+                        security.isAuthenticatingBiometrics
+                    )
                     }
 
                     DeleteAllDataButton()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                .padding(.vertical)
             }
-            .padding(.horizontal)
-            .padding(.vertical)
-            .navigationTitle(settings.language.text("Настройки", "Settings"))
+            .navigationTitle("Настройки".appLocalized(for: settings.language))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -123,7 +147,7 @@ struct SettingsView: View {
             switch destination {
             case .currency:
                 SettingsChoiceView(
-                    title: { $0.text("Валюта", "Currency") },
+                    titleKey: "Валюта",
                     choices: AppCurrency.allCases,
                     selected: $settings.currency,
                     choiceTitle: { $0.title(for: settings.language) }
@@ -138,22 +162,20 @@ struct SettingsView: View {
                 }
             case .theme:
                 SettingsChoiceView(
-                    title: { $0.text("Тема оформления", "Appearance") },
+                    titleKey: "Тема оформления",
                     choices: AppTheme.allCases,
                     selected: $settings.theme,
                     choiceTitle: { $0.title(for: settings.language) }
                 )
             case .language:
                 SettingsChoiceView(
-                    title: { $0.text("Язык", "Language") },
+                    titleKey: "Язык",
                     choices: AppLanguage.allCases,
                     selected: $settings.language,
                     choiceTitle: \.title
                 )
             case .pin:
-                SettingsPINView()
-            case .biometrics:
-                SettingsBiometricsView()
+                PINCodeView(mode: .change)
             }
         }
     }
@@ -161,9 +183,9 @@ struct SettingsView: View {
     private func categoryDirectionTitle(_ direction: Direction) -> String {
         switch direction {
         case .income:
-            settings.language.text("Доходы", "Income")
+            "Доходы".appLocalized(for: settings.language)
         case .outcome:
-            settings.language.text("Расходы", "Expenses")
+            "Расходы".appLocalized(for: settings.language)
         }
     }
 }
@@ -181,7 +203,9 @@ private struct SettingsSection<Content: View>: View {
             VStack(spacing: .zero) {
                 content
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -207,7 +231,7 @@ private struct SettingsRow: View {
 }
 
 private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
-    let title: (AppLanguage) -> String
+    let titleKey: String
     let choices: [Choice]
     @Binding var selected: Choice
     let choiceTitle: (Choice) -> String
@@ -244,127 +268,7 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
                 }
             }
             .padding(.horizontal)
-            .navigationTitle(title(settings.language))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
-        }
-        .id(settings.theme)
-        .settingsTheme(settings.theme)
-        .presentationDetents([.medium])
-    }
-}
-
-private struct SettingsPINView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var security: AppSecurityManager
-    @EnvironmentObject private var settings: AppSettings
-    @State private var pin = ""
-    @State private var showValidationError = false
-
-    var body: some View {
-        NavigationStack {
-            VStack {
-                Text(
-                    security.hasPIN
-                        ? settings.language.text("Введите новый PIN-код", "Enter a new PIN code")
-                        : settings.language.text("Задайте PIN-код", "Set a PIN code")
-                )
-                .font(.body)
-                .foregroundStyle(.secondary)
-
-                SecureField("PIN", text: $pin)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .multilineTextAlignment(.center)
-                    .font(.title2.monospacedDigit())
-                    .padding()
-                    .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
-                    .onChange(of: pin) { _, value in
-                        pin = String(value.filter(\.isNumber).prefix(4))
-                    }
-
-                Button(settings.language.text("Сохранить", "Save")) {
-                    if security.setPIN(pin) {
-                        dismiss()
-                    } else {
-                        showValidationError = true
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
-
-                Spacer()
-            }
-            .padding()
-            .navigationTitle(settings.language.text("PIN-код", "PIN code"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
-            .alert(settings.language.text("PIN-код должен содержать 4 цифры", "PIN code must contain 4 digits"), isPresented: $showValidationError) {
-                Button("ОК", role: .cancel) {}
-            }
-        }
-        .id(settings.theme)
-        .settingsTheme(settings.theme)
-        .presentationDetents([.medium])
-    }
-}
-
-private struct SettingsBiometricsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var security: AppSecurityManager
-    @EnvironmentObject private var settings: AppSettings
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading) {
-                    Toggle(
-                        security.biometryName,
-                        isOn: Binding(
-                            get: { security.useBiometrics },
-                            set: { isEnabled in
-                                if isEnabled {
-                                    Task { await security.enableBiometrics() }
-                                } else {
-                                    security.disableBiometrics()
-                                }
-                            }
-                        )
-                    )
-                    .disabled(
-                        !security.isBiometricsAvailable ||
-                        !security.hasPIN ||
-                        security.isAuthenticatingBiometrics
-                    )
-
-                    if !security.hasPIN {
-                        Text(settings.language.text("Сначала задайте PIN-код", "Set a PIN code first"))
-                            .padding(.top, 4)
-                    } else if !security.isBiometricsAvailable {
-                        Text(settings.language.text("Биометрия недоступна на этом устройстве", "Biometrics are unavailable on this device"))
-                            .padding(.top, 4)
-                    }
-                }
-                .foregroundStyle(.secondary)
-                .padding()
-            }
-            .navigationTitle(security.biometryName)
+            .navigationTitle(titleKey.appLocalized(for: settings.language))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

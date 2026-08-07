@@ -8,7 +8,10 @@ struct AddButton: View {
             Spacer()
             HStack {
                 Spacer()
-                Button(action: action) {
+                Button {
+                    HapticsManager.shared.play(.action)
+                    action()
+                } label: {
                     Image(systemName: "plus")
                         .font(.largeTitle)
                         .fontWeight(.medium)

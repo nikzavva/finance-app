@@ -56,7 +56,7 @@ final class TransactionTests: XCTestCase {
     }
 
     @MainActor
-    func testFinanceAppViewModelKeepsCategorySelectionPerDirection() {
+    func testFinanceAppViewModelKeepsCategorySelectionPerDirection() async {
         let viewModel = FinanceAppViewModel()
         let income = Category(id: 1, name: "Зарплата", emoji: "💰", isIncome: true)
         let outcome = Category(id: 2, name: "Продукты", emoji: "🍎", isIncome: false)
@@ -121,7 +121,7 @@ final class TransactionTests: XCTestCase {
     }
 
     @MainActor
-    func testAnalyticsPeriodMovesEndWhenStartBecomesLater() {
+    func testAnalyticsPeriodMovesEndWhenStartBecomesLater() async {
         let calendar = Calendar(identifier: .gregorian)
         let today = calendar.startOfDay(for: Date())
         let initialStart = calendar.date(byAdding: .day, value: -10, to: today)!
@@ -148,7 +148,7 @@ final class TransactionTests: XCTestCase {
     }
 
     @MainActor
-    func testAnalyticsPeriodMovesStartWhenEndBecomesEarlier() {
+    func testAnalyticsPeriodMovesStartWhenEndBecomesEarlier() async {
         let calendar = Calendar(identifier: .gregorian)
         let today = calendar.startOfDay(for: Date())
         let initialStart = calendar.date(byAdding: .day, value: -10, to: today)!

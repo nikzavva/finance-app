@@ -50,7 +50,7 @@ struct CreateAccountView: View {
                                         .font(.title2)
                                         .frame(width: UIConstants.Sizes.icon, height: UIConstants.Sizes.icon)
                                         .background(viewModel.emoji == emojiItem ? Color.accentColor : Color.clear)
-                                        .cornerRadius(8)
+                                        .cornerRadius(UIConstants.CornerRadius.small)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -117,6 +117,7 @@ struct CreateAccountView: View {
                         guard let account = viewModel.submit() else { return }
                         settings.currency = viewModel.currency
                         onCreate(account)
+                        HapticsManager.shared.play(.confirmation)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")

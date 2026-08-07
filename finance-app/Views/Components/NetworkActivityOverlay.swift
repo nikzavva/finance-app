@@ -8,11 +8,14 @@ private struct NetworkLoadingOverlay: ViewModifier {
             .overlay {
                 if viewModel.isLoading {
                     ZStack {
-                        Color.black.opacity(0.2)
+                        Color.black.opacity(UIConstants.Effects.overlayOpacity)
                             .ignoresSafeArea()
                         ProgressView("Загрузка...")
                             .padding()
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            .background(
+                                .regularMaterial,
+                                in: RoundedRectangle(cornerRadius: UIConstants.CornerRadius.medium)
+                            )
                     }
                 }
             }
