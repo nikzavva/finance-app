@@ -1,3 +1,4 @@
+import Foundation
 import UIKit
 
 public struct Entity: Equatable {
@@ -42,7 +43,6 @@ public final class PieChartView: UIView {
     }
 
     private enum Animation {
-        static let halfDuration: TimeInterval = 0.45
         static let key = "PieChartTransition"
     }
 
@@ -55,8 +55,15 @@ public final class PieChartView: UIView {
         .systemGray
     ]
 
+    private static func localized(_ russian: String, english: String) -> String {
+        UserDefaults.standard.string(forKey: "app_language") == "en" ? english : russian
+    }
+
     private let amountFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
+        formatter.locale = UserDefaults.standard.string(forKey: "app_language") == "en"
+            ? Locale(identifier: "en")
+            : Locale(identifier: "ru")
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = " "
         formatter.minimumFractionDigits = 0
@@ -129,7 +136,7 @@ public final class PieChartView: UIView {
             if otherValue > .zero {
                 result.append(
                     PieChartSegment(
-                        entity: Entity(value: otherValue, label: "Другое"),
+                        entity: Entity(value: otherValue, label: localized("Другое", english: "Other")),
                         color: colors[5]
                     )
                 )
@@ -145,7 +152,7 @@ public final class PieChartView: UIView {
         }
         return Array(segments.prefix(2)) + [
             PieChartSegment(
-                entity: Entity(value: otherValue, label: "Другое"),
+                entity: Entity(value: otherValue, label: localized("Другое", english: "Other")),
                 color: segments[2].color
             )
         ]
@@ -173,7 +180,7 @@ public final class PieChartView: UIView {
         let contentWidth = readableWidth > .zero
             ? min(availableWidth, readableWidth)
             : availableWidth
-        return contentWidth * 2 / 3
+        return contentWidth * UIConstants.Ratios.chartDiameter
     }
 
     private func donutWidth(for diameter: CGFloat) -> CGFloat {
@@ -307,7 +314,7 @@ public final class PieChartView: UIView {
 
         let animation = CAAnimationGroup()
         animation.animations = [rotation, fade]
-        animation.duration = Animation.halfDuration
+        animation.duration = UIConstants.Animation.halfDuration
         animation.timingFunction = timingFunction
 
         CATransaction.begin()
@@ -435,7 +442,7 @@ public final class PieChartView: UIView {
     private func drawTotal(_ total: Decimal, in chartRect: CGRect) {
         let amount = amountFormatter.string(from: NSDecimalNumber(decimal: total)) ?? "0"
         let amountText = currencySymbol.map { "\(amount) \($0)" } ?? amount
-        let titleText = "Всего за период"
+        let titleText = Self.localized("Всего за период", english: "Total for period")
         let lineWidth = donutWidth(for: chartRect.width)
         let availableWidth = max(chartRect.width - lineWidth * 2, .zero)
         let paragraphStyle = NSMutableParagraphStyle()

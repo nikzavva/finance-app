@@ -20,6 +20,7 @@ final class EditTransactionViewModel: ObservableObject {
     @Published var showSaveError = false
     @Published private(set) var errorMessage = ""
     @Published private(set) var isSaving = false
+    @Published private(set) var accountCurrency = AppSettings.currentCurrency
 
     private let transactionsService: TransactionsServicing
 
@@ -49,28 +50,34 @@ final class EditTransactionViewModel: ObservableObject {
     }
 
     var navigationTitle: String {
-        transaction.direction == .income ? "Корректировка дохода" : "Корректировка расхода"
+        transaction.direction == .income ? "Корректировка дохода".appLocalized : "Корректировка расхода".appLocalized
     }
 
     var validationTitle: String {
-        hasInsufficientFunds ? "Недостаточно средств" : "Заполните все поля"
+        hasInsufficientFunds ? "Недостаточно средств".appLocalized : "Заполните все поля".appLocalized
     }
 
     var validationMessage: String {
-        hasInsufficientFunds ? "Недостаточно средств на счёте" : "Сумма должна быть больше 0"
+        hasInsufficientFunds ? "Недостаточно средств на счёте".appLocalized : "Сумма должна быть больше 0".appLocalized
     }
 
     func loadInitialData() async {
         async let categoriesTask = categoriesService.fetchCategories(direction: transaction.direction)
         async let accountsTask = accountsService.fetchAccounts()
 
-        let (categories, accounts) = await (categoriesTask, accountsTask)
+        let (categories, loadedAccounts) = await (categoriesTask, accountsTask)
         guard !Task.isCancelled else { return }
+
+        let initialAccount = loadedAccounts.first { $0.id == transaction.accountId }
+        let accountCurrency = initialAccount
+            .flatMap { AppCurrency(rawValue: $0.currency) } ?? AppSettings.currentCurrency
+        let accounts = loadedAccounts.filter { $0.currency == accountCurrency.rawValue }
 
         self.categories = categories
         self.accounts = accounts
+        self.accountCurrency = accountCurrency
         selectedCategory = categories.first { $0.id == transaction.categoryId }
-        selectedAccount = accounts.first { $0.id == transaction.accountId }
+        selectedAccount = initialAccount
 
         let initialAmount = AmountInputFormatter.format(transaction.amount, with: formatter)
         amount = initialAmount
@@ -122,7 +129,7 @@ final class EditTransactionViewModel: ObservableObject {
             deletionBlocked = true
             showValidationError = true
         case .failed:
-            errorMessage = "Не удалось сохранить операцию"
+            errorMessage = "Не удалось сохранить операцию".appLocalized
             showSaveError = true
         }
         return false
@@ -142,7 +149,7 @@ final class EditTransactionViewModel: ObservableObject {
             deletionBlocked = true
             showValidationError = true
         case .failed:
-            errorMessage = "Не удалось удалить операцию"
+            errorMessage = "Не удалось удалить операцию".appLocalized
             showSaveError = true
         }
         return false

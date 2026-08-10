@@ -19,7 +19,7 @@ final class AnalyticsChartDetailsViewController: AnalyticsFilterTableViewControl
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Детализация"
+        title = "Детализация".appLocalized
         configureCloseOnlyNavigation()
         configureChartHeader()
         configureTableView()

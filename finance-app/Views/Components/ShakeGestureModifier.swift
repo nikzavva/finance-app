@@ -28,7 +28,7 @@ class ShakeViewController: UIViewController {
 
     override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
         if motion == .motionShake {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            HapticsManager.shared.play(.action)
             action?()
         }
     }

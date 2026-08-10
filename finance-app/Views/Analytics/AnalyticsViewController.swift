@@ -7,8 +7,9 @@ final class AnalyticsViewController: UIViewController {
         case transactions
     }
 
-    private enum SheetSizing {
+    private enum SheetSizing: Equatable {
         case medium
+        case expandedOnPad
         case resizable
     }
 
@@ -50,8 +51,16 @@ final class AnalyticsViewController: UIViewController {
         viewModel.stop()
     }
 
+    func updateLocalization(currency: AppCurrency) {
+        title = "Аналитика".appLocalized
+        viewModel.updateCurrency(currency)
+        pieChartView.currencySymbol = viewModel.currencySymbol
+        viewModel.refreshLocalization()
+        pieChartView.setNeedsDisplay()
+    }
+
     private func configureNavigation() {
-        title = "Аналитика"
+        title = "Аналитика".appLocalized
         view.backgroundColor = .systemBackground
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -65,7 +74,7 @@ final class AnalyticsViewController: UIViewController {
 
     private func configureChartHeader() {
         pieChartView.translatesAutoresizingMaskIntoConstraints = false
-        pieChartView.currencySymbol = "₽"
+        pieChartView.currencySymbol = viewModel.currencySymbol
         pieChartView.addGestureRecognizer(
             UITapGestureRecognizer(target: self, action: #selector(chartTapped))
         )
@@ -164,7 +173,7 @@ final class AnalyticsViewController: UIViewController {
     @objc private func chartTapped() {
         let detailsViewModel = AnalyticsChartDetailsViewModel(
             entities: viewModel.chartEntities,
-            currencySymbol: "₽"
+            currencySymbol: viewModel.currencySymbol
         )
         let controller = AnalyticsChartDetailsViewController(viewModel: detailsViewModel)
         presentSheet(controller, sizing: .resizable)
@@ -181,7 +190,7 @@ final class AnalyticsViewController: UIViewController {
         let controller = AnalyticsPeriodViewController(
             viewModel: viewModel.makePeriodViewModel()
         )
-        presentSheet(controller, sizing: .medium)
+        presentSheet(controller, sizing: .expandedOnPad)
     }
 
     private func presentSortOrderPicker() {
@@ -215,15 +224,22 @@ final class AnalyticsViewController: UIViewController {
             case .medium:
                 sheet.detents = [.medium()]
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            case .expandedOnPad:
+                sheet.detents = traitCollection.userInterfaceIdiom == .pad
+                    ? [.large()]
+                    : [.medium()]
+                sheet.prefersScrollingExpandsWhenScrolledToEdge = false
             case .resizable:
                 sheet.prefersGrabberVisible = true
-                sheet.detents = [.medium(), .large()]
+                sheet.detents = traitCollection.userInterfaceIdiom == .pad
+                    ? [.large()]
+                    : [.medium(), .large()]
             }
         }
 
         present(navigationController, animated: true) { [weak self, weak navigationController] in
-            guard case .medium = sizing,
-                  let self,
+            guard let self,
+                  sizing != .resizable,
                   let containerView = navigationController?.presentationController?.containerView else {
                 return
             }
@@ -334,7 +350,7 @@ extension AnalyticsViewController: UITableViewDelegate {
         let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: identifier)
             ?? UITableViewHeaderFooterView(reuseIdentifier: identifier)
         var content = UIListContentConfiguration.header()
-        content.text = "Транзакции"
+        content.text = "Транзакции".appLocalized
         content.textProperties.color = .label
         let font = UIFont.preferredFont(forTextStyle: .title2)
         if let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold) {
@@ -396,7 +412,7 @@ private final class AnalyticsTransactionCell: UITableViewCell {
         emojiLabel.font = .preferredFont(forTextStyle: .title3)
         emojiLabel.textAlignment = .center
         emojiLabel.layer.cornerRadius = UIConstants.Sizes.icon / 2
-        emojiLabel.layer.borderWidth = 1 / UIScreen.main.scale
+        emojiLabel.layer.borderWidth = UIConstants.Sizes.hairlineWidth
         emojiLabel.layer.borderColor = UIColor.systemGray5.cgColor
         emojiLabel.clipsToBounds = true
         contentView.addSubview(emojiLabel)

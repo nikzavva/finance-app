@@ -10,4 +10,12 @@ struct Transaction: Identifiable {
     let createdAt: String?
     let updatedAt: String?
     let direction: Direction
+
+    var displayComment: String {
+        guard let comment = comment?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !comment.isEmpty else {
+            return ""
+        }
+        return comment
+    }
 }

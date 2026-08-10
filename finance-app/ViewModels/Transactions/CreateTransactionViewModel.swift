@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class CreateTransactionViewModel: ObservableObject {
     let direction: Direction
+    let currency: AppCurrency
     @Published var amount = "0"
     @Published var previousAmount = "0"
     @Published var date = Date()
@@ -31,19 +32,23 @@ final class CreateTransactionViewModel: ObservableObject {
     init(
         direction: Direction,
         initialAccount: BankAccount?,
+        currency: AppCurrency? = nil,
         transactionsService: TransactionsServicing? = nil,
         accountsService: BankAccountsServicing? = nil,
         categoriesService: CategoriesServicing? = nil
     ) {
         self.direction = direction
         self.initialAccount = initialAccount
+        self.currency = initialAccount.flatMap { AppCurrency(rawValue: $0.currency) }
+            ?? currency
+            ?? AppSettings.currentCurrency
         self.transactionsService = transactionsService ?? TransactionsService()
         self.accountsService = accountsService ?? BankAccountsService()
         self.categoriesService = categoriesService ?? CategoriesService()
     }
 
     var navigationTitle: String {
-        direction == .income ? "Внести доход" : "Внести расход"
+        direction == .income ? "Внести доход".appLocalized : "Внести расход".appLocalized
     }
 
     var validationMessage: String {
@@ -51,23 +56,25 @@ final class CreateTransactionViewModel: ObservableObject {
            let selectedAccount,
            direction == .outcome,
            selectedAccount.balance < amount {
-            return "Недостаточно средств на счёте"
+            return "Недостаточно средств на счёте".appLocalized
         }
-        return "Сумма должна быть больше 0 и статья обязательна"
+        return "Сумма должна быть больше 0 и статья обязательна".appLocalized
     }
 
     func loadInitialData() async {
         async let categoriesTask = categoriesService.fetchCategories(direction: direction)
         async let accountsTask = accountsService.fetchAccounts()
 
-        let (categories, accounts) = await (categoriesTask, accountsTask)
+        let (categories, loadedAccounts) = await (categoriesTask, accountsTask)
         guard !Task.isCancelled else { return }
+
+        let accounts = loadedAccounts.filter { $0.currency == currency.rawValue }
 
         self.categories = categories
         self.accounts = accounts
 
         if accounts.isEmpty {
-            errorMessage = "Сначала создайте счёт в разделе «Счета»"
+            errorMessage = "Сначала создайте счёт в разделе «Счета»".appLocalized
             showLoadError = true
         } else if let initialAccount {
             selectedAccount = initialAccount
@@ -107,13 +114,13 @@ final class CreateTransactionViewModel: ObservableObject {
         case .created:
             return true
         case .insufficientFunds:
-            errorMessage = "Недостаточно средств на счёте"
+            errorMessage = "Недостаточно средств на счёте".appLocalized
             showSaveError = true
         case .accountNotFound:
-            errorMessage = "Выбранный счёт больше недоступен"
+            errorMessage = "Выбранный счёт больше недоступен".appLocalized
             showSaveError = true
         case .failed:
-            errorMessage = "Не удалось создать операцию"
+            errorMessage = "Не удалось создать операцию".appLocalized
             showSaveError = true
         }
         return false

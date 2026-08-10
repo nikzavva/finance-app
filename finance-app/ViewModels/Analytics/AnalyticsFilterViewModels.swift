@@ -18,11 +18,11 @@ final class AnalyticsDirectionFilterViewModel {
     func title(at index: Int) -> String {
         switch directions[index] {
         case nil:
-            return "Все"
+            return "Все".appLocalized
         case .outcome:
-            return "Расходы"
+            return "Расходы".appLocalized
         case .income:
-            return "Доходы"
+            return "Доходы".appLocalized
         }
     }
 
@@ -52,7 +52,7 @@ final class AnalyticsSortOrderFilterViewModel {
     }
 
     func title(at index: Int) -> String {
-        sortOrders[index] == .date ? "По дате" : "По сумме"
+        sortOrders[index] == .date ? "По дате".appLocalized : "По сумме".appLocalized
     }
 
     func isSelected(at index: Int) -> Bool {
@@ -84,6 +84,7 @@ final class AnalyticsPeriodFilterViewModel {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = AppSettings.currentLanguage.locale
         formatter.dateStyle = .short
         formatter.timeStyle = .none
         return formatter
@@ -134,15 +135,15 @@ final class AnalyticsPeriodFilterViewModel {
     func title(at index: Int) -> String {
         switch Preset.allCases[index] {
         case .custom:
-            return "Произвольный"
+            return "Произвольный".appLocalized
         case .week:
-            return "За неделю"
+            return "За неделю".appLocalized
         case .month:
-            return "За месяц"
+            return "За месяц".appLocalized
         case .quarter:
-            return "За квартал"
+            return "За квартал".appLocalized
         case .year:
-            return "За год"
+            return "За год".appLocalized
         }
     }
 
@@ -268,7 +269,7 @@ final class AnalyticsCategoriesFilterViewModel {
     func row(at index: Int) -> AnalyticsCategoryRowViewData {
         let category = categories[index]
         return AnalyticsCategoryRowViewData(
-            title: "\(category.emoji)  \(category.name)",
+            title: "\(category.emoji)  \(category.localizedName)",
             isSelected: selectedCategoryIDs.contains(category.id)
         )
     }
@@ -316,7 +317,7 @@ final class AnalyticsAccountsFilterViewModel {
     func row(at index: Int) -> AnalyticsAccountRowViewData {
         guard index > 0 else {
             return AnalyticsAccountRowViewData(
-                title: "Все счета",
+                title: "Все счета".appLocalized,
                 isSelected: selectedAccountID == nil
             )
         }

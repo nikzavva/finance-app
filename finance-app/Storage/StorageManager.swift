@@ -6,7 +6,7 @@ enum StorageMigrationError: LocalizedError {
     case verificationFailed
 
     var errorDescription: String? {
-        "Не удалось проверить целостность перенесённых данных"
+        "Не удалось проверить целостность перенесённых данных".appLocalized
     }
 }
 
@@ -101,6 +101,37 @@ final class StorageManager {
         }
 
         settings.set(currentType.rawValue, forKey: "last_storage_type")
+    }
+
+    func clearUserData() async throws {
+        try await DataMutationCoordinator.shared.withLock {
+            let swiftDataTransactions = Self.makeTransactionsStorage(
+                type: .swiftData,
+                swiftData: swiftDataContainer,
+                coreData: coreDataStack.context
+            )
+            let swiftDataAccounts = Self.makeAccountsStorage(
+                type: .swiftData,
+                swiftData: swiftDataContainer,
+                coreData: coreDataStack.context
+            )
+            let coreDataTransactions = Self.makeTransactionsStorage(
+                type: .coreData,
+                swiftData: swiftDataContainer,
+                coreData: coreDataStack.context
+            )
+            let coreDataAccounts = Self.makeAccountsStorage(
+                type: .coreData,
+                swiftData: swiftDataContainer,
+                coreData: coreDataStack.context
+            )
+
+            try await swiftDataTransactions.deleteAll()
+            try await swiftDataAccounts.deleteAll()
+            try await coreDataTransactions.deleteAll()
+            try await coreDataAccounts.deleteAll()
+            try backupStorage.deleteAllActions()
+        }
     }
 
     private func migrateStorage(from sourceType: StorageType, to destinationType: StorageType) async throws {

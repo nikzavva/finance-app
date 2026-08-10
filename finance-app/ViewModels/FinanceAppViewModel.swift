@@ -21,6 +21,17 @@ final class FinanceAppViewModel: ObservableObject {
         selectedTab == .income ? .income : .outcome
     }
 
+    var selectedCategory: Category? {
+        switch selectedTab {
+        case .outcome:
+            outcomeCategory
+        case .income:
+            incomeCategory
+        case .accounts:
+            nil
+        }
+    }
+
     func selectCategory(_ category: Category, for direction: Direction) {
         switch direction {
         case .income:

@@ -94,4 +94,11 @@ final class BackupStorage {
         context.delete(existing)
         try context.save()
     }
+
+    func deleteAllActions() throws {
+        let context = ModelContext(container)
+        try context.delete(model: BackupTransactionAction.self)
+        try context.delete(model: BackupAccountAction.self)
+        try context.save()
+    }
 }

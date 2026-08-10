@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TransactionsListView: View {
+    @EnvironmentObject private var settings: AppSettings
     @Binding private var selectedDate: Date
     @Binding private var selectedCategory: Category?
     @StateObject private var viewModel: TransactionsListViewModel
@@ -33,8 +34,12 @@ struct TransactionsListView: View {
         .onAppear {
             viewModel.onAppear(
                 selectedDate: selectedDate,
-                selectedCategory: selectedCategory
+                selectedCategory: selectedCategory,
+                currency: settings.currency
             )
+        }
+        .onChange(of: settings.currency) { _, currency in
+            viewModel.setCurrency(currency)
         }
         .onChange(of: selectedDate) {
             viewModel.loadTransactions(
@@ -63,10 +68,13 @@ struct TransactionsListView: View {
     private var mainContent: some View {
         VStack {
             VStack(alignment: .leading, spacing: UIConstants.Spacing.small) {
-                Text(viewModel.totalTitle)
+                Text(
+                    (viewModel.direction == .income ? "доходы, всего" : "расходы, всего")
+                        .appLocalized(for: settings.language)
+                )
                     .font(.callout)
                     .foregroundColor(.secondary)
-                Text(viewModel.formattedTotalAmount)
+                Text(viewModel.formattedTotalAmount(currencySymbol: settings.currency.symbol))
                     .font(.system(size: UIConstants.Sizes.totalAmountFontSize, weight: .bold, design: .rounded))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,7 +95,8 @@ struct TransactionsListView: View {
                         TransactionRow(
                             category: viewModel.category(for: transaction),
                             transaction: transaction,
-                            formatter: viewModel.formatter
+                            formatter: viewModel.formatter,
+                            currencySymbol: settings.currency.symbol
                         )
                         .onTapGesture {
                             viewModel.selectTransaction(transaction)

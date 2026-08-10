@@ -42,7 +42,7 @@ struct FinanceAppView: View {
                         direction: viewModel.selectedDirection,
                         selectedDate: $viewModel.selectedDate,
                         showDatePicker: $viewModel.showDatePicker,
-                        showSettings: $viewModel.showCategorySelection
+                        showSettings: $viewModel.showSettings
                     )
                 case .accounts:
                     AccountsToolbar(showSettings: $viewModel.showSettings)
@@ -56,21 +56,21 @@ struct FinanceAppView: View {
                         .toolbar(.hidden, for: .tabBar)
                 }
             }
-            .sheet(isPresented: $viewModel.showCategorySelection) {
-                CategorySelectionView(direction: viewModel.selectedDirection) { category in
-                    viewModel.selectCategory(category, for: viewModel.selectedDirection)
-                }
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            }
             .sheet(isPresented: $viewModel.showSettings) {
-                NavigationStack {
-                    SettingsView()
+                SettingsView(
+                    categoryDirection: viewModel.selectedTab == .accounts
+                        ? nil
+                        : viewModel.selectedDirection,
+                    selectedCategory: viewModel.selectedCategory
+                ) { category, direction in
+                    viewModel.selectCategory(category, for: direction)
                 }
-                .presentationDetents([.medium])
             }
         }
         .tint(Color.accentColor)
+        .onChange(of: viewModel.selectedTab) {
+            HapticsManager.shared.play(.selection)
+        }
     }
 }
 

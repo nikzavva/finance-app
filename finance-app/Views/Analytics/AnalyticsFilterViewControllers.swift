@@ -69,7 +69,7 @@ final class AnalyticsDirectionViewController: AnalyticsFilterTableViewController
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Тип"
+        title = "Тип".appLocalized
         configureCloseOnlyNavigation()
         tableView.isScrollEnabled = false
     }
@@ -110,7 +110,7 @@ final class AnalyticsSortOrderViewController: AnalyticsFilterTableViewController
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Сортировка"
+        title = "Сортировка".appLocalized
         configureCloseOnlyNavigation()
         tableView.isScrollEnabled = false
     }
@@ -151,7 +151,7 @@ final class AnalyticsPeriodViewController: AnalyticsFilterTableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Период"
+        title = "Период".appLocalized
         configureCloseOnlyNavigation()
         tableView.isScrollEnabled = false
     }
@@ -299,12 +299,12 @@ private final class AnalyticsCustomPeriodCell: UITableViewCell {
 
         configure(
             datePicker: startDatePicker,
-            accessibilityLabel: "Начало периода",
+            accessibilityLabel: "Начало периода".appLocalized,
             action: #selector(startDatePickerChanged)
         )
         configure(
             datePicker: endDatePicker,
-            accessibilityLabel: "Конец периода",
+            accessibilityLabel: "Конец периода".appLocalized,
             action: #selector(endDatePickerChanged)
         )
 
@@ -364,6 +364,7 @@ private final class AnalyticsCustomPeriodCell: UITableViewCell {
         accessibilityLabel: String,
         action: Selector
     ) {
+        datePicker.locale = AppSettings.currentLanguage.locale
         datePicker.datePickerMode = .date
         datePicker.preferredDatePickerStyle = .compact
         datePicker.maximumDate = Date()
@@ -394,7 +395,7 @@ final class AnalyticsCategoriesViewController: AnalyticsFilterTableViewControlle
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Статьи"
+        title = "Статьи".appLocalized
     }
 
     override func saveSelection() {
@@ -438,7 +439,7 @@ final class AnalyticsAccountsViewController: AnalyticsFilterTableViewController 
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Счёт"
+        title = "Счёт".appLocalized
         configureCloseOnlyNavigation()
     }
 

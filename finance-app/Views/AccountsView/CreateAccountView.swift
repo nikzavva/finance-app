@@ -4,6 +4,7 @@ struct CreateAccountView: View {
     let onCreate: (BankAccount) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel = CreateAccountViewModel()
     @FocusState private var isNameFocused: Bool
     @FocusState private var isAmountFocused: Bool
@@ -49,7 +50,7 @@ struct CreateAccountView: View {
                                         .font(.title2)
                                         .frame(width: UIConstants.Sizes.icon, height: UIConstants.Sizes.icon)
                                         .background(viewModel.emoji == emojiItem ? Color.accentColor : Color.clear)
-                                        .cornerRadius(8)
+                                        .cornerRadius(UIConstants.CornerRadius.small)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -82,9 +83,14 @@ struct CreateAccountView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text("Руб.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
+                    Picker("", selection: $viewModel.currency) {
+                        ForEach(AppCurrency.allCases) { currency in
+                            Text(currency.title(for: settings.language))
+                                .tag(currency)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
                 .padding(.horizontal)
                 .padding(.vertical)
@@ -109,7 +115,9 @@ struct CreateAccountView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         guard let account = viewModel.submit() else { return }
+                        settings.currency = viewModel.currency
                         onCreate(account)
+                        HapticsManager.shared.play(.confirmation)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")
@@ -132,6 +140,6 @@ struct CreateAccountView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

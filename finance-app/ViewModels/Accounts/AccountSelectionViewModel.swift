@@ -7,9 +7,14 @@ final class AccountSelectionViewModel: ObservableObject {
     @Published var searchText = ""
 
     private let accountsService: any BankAccountsServicing
+    private let currency: AppCurrency
     private var loadRequestID = UUID()
 
-    init(accountsService: (any BankAccountsServicing)? = nil) {
+    init(
+        currency: AppCurrency? = nil,
+        accountsService: (any BankAccountsServicing)? = nil
+    ) {
+        self.currency = currency ?? AppSettings.currentCurrency
         self.accountsService = accountsService ?? BankAccountsService()
     }
 
@@ -27,6 +32,6 @@ final class AccountSelectionViewModel: ObservableObject {
         loadRequestID = requestID
         let loadedAccounts = await accountsService.fetchAccounts()
         guard loadRequestID == requestID else { return }
-        accounts = loadedAccounts
+        accounts = loadedAccounts.filter { $0.currency == currency.rawValue }
     }
 }

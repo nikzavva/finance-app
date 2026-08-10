@@ -6,6 +6,7 @@ struct BalanceAdjustmentView: View {
     let onDelete: (Int) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: BalanceAdjustmentViewModel
     @FocusState private var isAmountFocused: Bool
 
@@ -54,7 +55,7 @@ struct BalanceAdjustmentView: View {
                         .font(.body)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(appCurrency)
+                    Text(AppCurrency(rawValue: appCurrency)?.title(for: settings.language) ?? appCurrency)
                         .font(.body)
                         .foregroundColor(.secondary)
                 }
@@ -85,6 +86,7 @@ struct BalanceAdjustmentView: View {
                     Button(action: {
                         guard let submission = viewModel.submitBalance() else { return }
                         onSave(submission.amount, submission.date)
+                        HapticsManager.shared.play(.confirmation)
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")
@@ -102,7 +104,7 @@ struct BalanceAdjustmentView: View {
                 }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Счёт будет удалён. Это действие нельзя отменить")
+                Text("Счёт и все операции по нему будут удалены. Это действие нельзя отменить")
             }
             .gesture(
                 DragGesture()
@@ -111,6 +113,6 @@ struct BalanceAdjustmentView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

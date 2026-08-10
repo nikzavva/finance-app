@@ -420,7 +420,11 @@ final class TransactionsService {
     func deleteTransaction(id: Int) async -> TransactionDeletionResult {
         let resource = DataResource.transaction(id)
         await InFlightDataRegistry.shared.acquire(resource)
-        let result = await deleteTransactionWhileInFlight(id: id)
+        let result = await deleteTransactionWhileInFlight(
+            id: id,
+            updatesBalance: true,
+            postsNotifications: true
+        )
         await InFlightDataRegistry.shared.end(resource)
         if result == .deleted {
             NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
@@ -429,15 +433,53 @@ final class TransactionsService {
         return result
     }
 
-    private func deleteTransactionWhileInFlight(id: Int) async -> TransactionDeletionResult {
+    func deleteTransactionsForAccount(id: Int) async -> Bool {
+        let transactions = await fetchTransactionsForAccount(id: id).sorted { first, second in
+            first.direction == .outcome && second.direction == .income
+        }
+        var didDeleteTransaction = false
+
+        for transaction in transactions {
+            let resource = DataResource.transaction(transaction.id)
+            await InFlightDataRegistry.shared.acquire(resource)
+            let result = await deleteTransactionWhileInFlight(
+                id: transaction.id,
+                updatesBalance: false,
+                postsNotifications: false
+            )
+            await InFlightDataRegistry.shared.end(resource)
+            guard result == .deleted else {
+                if didDeleteTransaction {
+                    NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
+                    NotificationCenter.default.post(name: .accountsDidChange, object: nil)
+                }
+                return false
+            }
+            didDeleteTransaction = true
+        }
+
+        if didDeleteTransaction {
+            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
+            NotificationCenter.default.post(name: .accountsDidChange, object: nil)
+        }
+        return true
+    }
+
+    private func deleteTransactionWhileInFlight(
+        id: Int,
+        updatesBalance: Bool,
+        postsNotifications: Bool
+    ) async -> TransactionDeletionResult {
         let localResult = await DataMutationCoordinator.shared.withLock {
-            await deleteLocalTransaction(id: id)
+            await deleteLocalTransaction(id: id, updatesBalance: updatesBalance)
         }
 
         guard localResult == .deleted else { return localResult }
 
-        NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
-        NotificationCenter.default.post(name: .accountsDidChange, object: nil)
+        if postsNotifications {
+            NotificationCenter.default.post(name: .transactionsDidChange, object: nil)
+            NotificationCenter.default.post(name: .accountsDidChange, object: nil)
+        }
 
         guard NetworkMonitor.shared.isConnected, !isTemporaryTransactionID(id) else {
             return .deleted
@@ -576,9 +618,11 @@ final class TransactionsService {
         }
     }
 
-    private func deleteLocalTransaction(id: Int) async -> TransactionDeletionResult {
+    private func deleteLocalTransaction(
+        id: Int,
+        updatesBalance: Bool
+    ) async -> TransactionDeletionResult {
         let transaction: Transaction
-        let account: BankAccount
 
         do {
             guard let storedTransaction = try await storage.fetch(byIds: [id]).first else {
@@ -586,6 +630,27 @@ final class TransactionsService {
             }
             transaction = storedTransaction
             guard transaction.amount > 0 else { return .failed }
+        } catch {
+            return .failed
+        }
+
+        guard updatesBalance else {
+            do {
+                try await storage.delete(byId: id)
+                do {
+                    try backup.addTransactionAction(transaction, action: .delete)
+                    return .deleted
+                } catch {
+                    try? await storage.update(transaction)
+                    return .failed
+                }
+            } catch {
+                return .failed
+            }
+        }
+
+        let account: BankAccount
+        do {
             guard let storedAccount = try await accountsStorage.fetch(byId: transaction.accountId) else {
                 return .failed
             }

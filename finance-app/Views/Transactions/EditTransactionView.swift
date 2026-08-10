@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EditTransactionView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: AppSettings
     @StateObject private var viewModel: EditTransactionViewModel
     @FocusState private var isAmountFocused: Bool
     @FocusState private var isCommentFocused: Bool
@@ -31,7 +32,10 @@ struct EditTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(viewModel.selectedCategory?.name ?? "Выбрать")
+                        Text(
+                            viewModel.selectedCategory?.localizedName(for: settings.language)
+                                ?? "Выбрать".appLocalized(for: settings.language)
+                        )
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
@@ -71,7 +75,7 @@ struct EditTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         Spacer()
-                        Text(viewModel.selectedAccount?.name ?? "Выбрать")
+                        Text(viewModel.selectedAccount?.name ?? "Выбрать".appLocalized)
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
@@ -125,6 +129,7 @@ struct EditTransactionView: View {
                     Button {
                         Task {
                             if await viewModel.submit() {
+                                HapticsManager.shared.play(.confirmation)
                                 dismiss()
                             }
                         }
@@ -143,13 +148,19 @@ struct EditTransactionView: View {
                 CategorySelectionView(direction: viewModel.transaction.direction) { category in
                     viewModel.selectCategory(category)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .sheet(isPresented: $viewModel.showAccountSelection) {
-                AccountSelectionView { account in
+                AccountSelectionView(currency: viewModel.accountCurrency) { account in
                     viewModel.selectAccount(account)
                 }
-                .presentationDetents([.medium, .large])
+                .adaptivePresentationDetents(
+                    iPhone: [.medium, .large],
+                    iPad: [.large]
+                )
             }
             .alert("Удалить операцию?", isPresented: $viewModel.showDeleteConfirmation) {
                 Button("Удалить", role: .destructive) {
@@ -183,6 +194,6 @@ struct EditTransactionView: View {
                     }
             )
         }
-        .presentationDetents([.medium])
+        .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
     }
 }

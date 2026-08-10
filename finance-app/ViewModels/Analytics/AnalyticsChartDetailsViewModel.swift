@@ -17,6 +17,7 @@ final class AnalyticsChartDetailsViewModel {
 
     private let amountFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
+        formatter.locale = AppSettings.currentLanguage.locale
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = " "
         formatter.minimumFractionDigits = 0
@@ -26,6 +27,7 @@ final class AnalyticsChartDetailsViewModel {
 
     private let percentFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
+        formatter.locale = AppSettings.currentLanguage.locale
         formatter.numberStyle = .percent
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 1

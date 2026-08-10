@@ -48,10 +48,13 @@ struct AmountTextField: View {
             GeometryReader { geometry in
                 Rectangle()
                     .fill(Color(.systemGray3))
-                    .frame(width: geometry.size.width * 3/4, height: 1)
+                    .frame(
+                        width: geometry.size.width * UIConstants.Ratios.amountDividerWidth,
+                        height: UIConstants.Sizes.dividerHeight
+                    )
                     .frame(maxWidth: .infinity)
             }
-            .frame(height: 1)
+            .frame(height: UIConstants.Sizes.dividerHeight)
             .padding(.bottom)
         }
     }
