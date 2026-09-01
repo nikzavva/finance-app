@@ -110,6 +110,7 @@ struct CreateAccountView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                     }
+                    .tint(.primary)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {

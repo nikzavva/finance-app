@@ -85,6 +85,7 @@ struct CategorySelectionView: View {
                             .font(.title3)
                             .foregroundColor(.primary)
                     }
+                    .tint(.primary)
                 }
             }
             .task {

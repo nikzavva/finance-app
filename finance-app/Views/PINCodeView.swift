@@ -30,6 +30,7 @@ struct PINCodeView: View {
                                         .font(.body)
                                         .foregroundStyle(.primary)
                                 }
+                                .tint(.primary)
                             }
                         }
                 }
@@ -37,8 +38,6 @@ struct PINCodeView: View {
                 pinContent
             }
         }
-        .id(settings.theme)
-        .preferredColorScheme(settings.theme.colorScheme)
         .adaptivePresentationDetents(
             iPhone: mode == .change ? [.medium] : [.large],
             iPad: [.large]

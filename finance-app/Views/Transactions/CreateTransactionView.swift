@@ -124,6 +124,7 @@ struct CreateTransactionView: View {
                             .font(.body)
                             .foregroundColor(.primary)
                     }
+                    .tint(.primary)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {

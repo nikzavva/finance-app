@@ -26,7 +26,6 @@ enum UIConstants {
 
     enum Effects {
         static let overlayOpacity = 0.2
-        static let privacyBackgroundOpacity = 0.2
         static let hiddenBalanceBlurRadius: CGFloat = 15
     }
 

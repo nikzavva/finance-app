@@ -22,6 +22,7 @@ struct SettingsView: View {
     let categoryDirection: Direction?
     let selectedCategory: Category?
     let onCategorySelected: (Category, Direction) -> Void
+    let onThemeSelected: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settings: AppSettings
@@ -138,11 +139,10 @@ struct SettingsView: View {
                             .font(.body)
                             .foregroundStyle(.primary)
                     }
+                    .tint(.primary)
                 }
             }
         }
-        .id(settings.theme)
-        .settingsTheme(settings.theme)
         .adaptivePresentationDetents(
             iPhone: [.medium, .large],
             iPad: [.large]
@@ -154,7 +154,8 @@ struct SettingsView: View {
                     titleKey: "Валюта",
                     choices: AppCurrency.allCases,
                     selected: $settings.currency,
-                    choiceTitle: { $0.title(for: settings.language) }
+                    choiceTitle: { $0.title(for: settings.language) },
+                    onSelection: nil
                 )
             case .categories:
                 if let categoryDirection {
@@ -176,14 +177,18 @@ struct SettingsView: View {
                     titleKey: "Тема оформления",
                     choices: AppTheme.allCases,
                     selected: $settings.theme,
-                    choiceTitle: { $0.title(for: settings.language) }
+                    choiceTitle: { $0.title(for: settings.language) },
+                    onSelection: { _ in
+                        onThemeSelected()
+                    }
                 )
             case .language:
                 SettingsChoiceView(
                     titleKey: "Язык",
                     choices: AppLanguage.allCases,
                     selected: $settings.language,
-                    choiceTitle: \.title
+                    choiceTitle: \.title,
+                    onSelection: nil
                 )
             case .pin:
                 PINCodeView(mode: .change)
@@ -246,6 +251,7 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
     let choices: [Choice]
     @Binding var selected: Choice
     let choiceTitle: (Choice) -> String
+    let onSelection: ((Choice) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settings: AppSettings
@@ -257,6 +263,7 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
                     ForEach(Array(choices.enumerated()), id: \.element.id) { index, choice in
                         Button {
                             selected = choice
+                            onSelection?(choice)
                         } label: {
                             HStack {
                                 Text(choiceTitle(choice))
@@ -288,23 +295,10 @@ private struct SettingsChoiceView<Choice: Identifiable & Hashable>: View {
                             .font(.body)
                             .foregroundStyle(.primary)
                     }
+                    .tint(.primary)
                 }
             }
         }
-        .id(settings.theme)
-        .settingsTheme(settings.theme)
         .adaptivePresentationDetents(iPhone: [.medium], iPad: [.large])
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func settingsTheme(_ theme: AppTheme) -> some View {
-        if let colorScheme = theme.colorScheme {
-            environment(\.colorScheme, colorScheme)
-                .preferredColorScheme(colorScheme)
-        } else {
-            preferredColorScheme(nil)
-        }
     }
 }

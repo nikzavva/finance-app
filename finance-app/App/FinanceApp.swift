@@ -1,5 +1,7 @@
+import Combine
 import SwiftUI
 import SwiftData
+import UIKit
 
 @main
 struct FinanceApp: App {
@@ -21,6 +23,8 @@ struct FinanceApp: App {
 
 private struct AppContentView: View {
     @StateObject private var viewModel: AppLaunchViewModel
+    @State private var locksOnNextActivation = false
+    @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var security: AppSecurityManager
     @Environment(\.scenePhase) private var scenePhase
 
@@ -50,6 +54,7 @@ private struct AppContentView: View {
             }
         }
         .onAppear {
+            settings.applyThemeToWindows()
             AppPrivacyController.setProtected(
                 scenePhase != .active && !security.isAuthenticatingBiometrics
             )
@@ -63,17 +68,37 @@ private struct AppContentView: View {
             Text(viewModel.migrationErrorMessage)
         }
         .onChange(of: scenePhase) { _, phase in
-            AppPrivacyController.setProtected(
-                phase != .active && !security.isAuthenticatingBiometrics
-            )
             if phase == .background {
+                locksOnNextActivation = true
+                if !security.isAuthenticatingBiometrics {
+                    AppPrivacyController.setProtected(true)
+                }
+            } else if phase == .active, locksOnNextActivation {
+                locksOnNextActivation = false
                 security.lockIfNeeded()
+                Task { @MainActor in
+                    await Task.yield()
+                    guard UIApplication.shared.applicationState == .active,
+                          !security.isAuthenticatingBiometrics else {
+                        return
+                    }
+                    AppPrivacyController.setProtected(false)
+                }
+            } else if phase == .active {
+                guard !security.isAuthenticatingBiometrics else { return }
+                AppPrivacyController.setProtected(false)
+            } else if !security.isAuthenticatingBiometrics {
+                AppPrivacyController.setProtected(true)
             }
         }
         .onChange(of: security.isAuthenticatingBiometrics) { _, isAuthenticating in
-            if scenePhase == .background && !isAuthenticating {
-                AppPrivacyController.setProtected(true)
+            if !isAuthenticating {
+                AppPrivacyController.setProtected(scenePhase != .active)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            guard !security.isAuthenticatingBiometrics else { return }
+            AppPrivacyController.setProtected(true)
         }
     }
 }

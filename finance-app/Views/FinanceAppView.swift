@@ -61,10 +61,14 @@ struct FinanceAppView: View {
                     categoryDirection: viewModel.selectedTab == .accounts
                         ? nil
                         : viewModel.selectedDirection,
-                    selectedCategory: viewModel.selectedCategory
-                ) { category, direction in
-                    viewModel.selectCategory(category, for: direction)
-                }
+                    selectedCategory: viewModel.selectedCategory,
+                    onCategorySelected: { category, direction in
+                        viewModel.selectCategory(category, for: direction)
+                    },
+                    onThemeSelected: {
+                        viewModel.showSettings = false
+                    }
+                )
             }
         }
         .tint(Color.accentColor)

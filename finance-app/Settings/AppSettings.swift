@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import UIKit
 
 enum AppCurrency: String, CaseIterable, Identifiable {
     case ruble = "RUB"
@@ -61,6 +62,14 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .dark: .dark
         }
     }
+
+    var interfaceStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: .unspecified
+        case .light: .light
+        case .dark: .dark
+        }
+    }
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -88,7 +97,10 @@ final class AppSettings: ObservableObject {
         didSet { userDefaults.set(currency.rawValue, forKey: Self.currencyKey) }
     }
     @Published var theme: AppTheme {
-        didSet { userDefaults.set(theme.rawValue, forKey: Self.themeKey) }
+        didSet {
+            userDefaults.set(theme.rawValue, forKey: Self.themeKey)
+            applyThemeToWindows()
+        }
     }
     @Published var language: AppLanguage {
         didSet { userDefaults.set(language.rawValue, forKey: Self.languageKey) }
@@ -122,5 +134,13 @@ final class AppSettings: ObservableObject {
 
     static var currentHapticsEnabled: Bool {
         UserDefaults.standard.object(forKey: hapticsKey) as? Bool ?? true
+    }
+
+    func applyThemeToWindows() {
+        let interfaceStyle = theme.interfaceStyle
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .forEach { $0.overrideUserInterfaceStyle = interfaceStyle }
     }
 }

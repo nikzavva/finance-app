@@ -17,16 +17,14 @@ enum AppPrivacyController {
 
     private static func addPrivacyBlur(to window: UIWindow) {
         guard !window.subviews.contains(where: { $0 is PrivacyBlurView }) else { return }
-        let blurView = PrivacyBlurView(effect: UIBlurEffect(style: .systemMaterial))
+        let blurView = PrivacyBlurView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
         blurView.frame = window.bounds
         blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blurView.isUserInteractionEnabled = false
-        blurView.contentView.backgroundColor = UIColor.systemBackground.withAlphaComponent(
-            UIConstants.Effects.privacyBackgroundOpacity
-        )
         window.addSubview(blurView)
         window.bringSubviewToFront(blurView)
         window.layoutIfNeeded()
+        CATransaction.flush()
     }
 
     private static func removePrivacyBlur(from window: UIWindow) {
